@@ -6,68 +6,57 @@
     <title>Alien Bingo | The Truth Vault</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        :root { --bg: #050505; --panel: #111; --accent: #39ff14; --verified: #ffd700; --text: #e0e0e0; --border: #333; }
+        :root { --bg: #050505; --panel: #111; --accent: #39ff14; --verified: #ffd700; --debunked: #ff2a2a; --text: #e0e0e0; --border: #333; }
         body { background-color: var(--bg); color: var(--text); font-family: 'Courier New', monospace; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
         /* Sidebar */
-        #sidebar { width: 320px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; }
-        .auth-box { margin-bottom: 20px; border: 1px solid #222; padding: 10px; border-radius: 4px; }
+        #sidebar { width: 340px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; overflow-y: hidden; }
+        .auth-box { margin-bottom: 15px; border: 1px solid #222; padding: 10px; border-radius: 4px; }
         #user-info { font-size: 0.7rem; color: var(--accent); margin-top: 5px; }
-        #search-bar { width: 100%; padding: 10px; background: #000; border: 1px solid var(--border); color: var(--accent); margin-bottom: 10px; box-sizing: border-box; }
         
-        #master-list { flex-grow: 1; overflow-y: auto; }
-        .theory-item { background: #1a1a1a; padding: 12px; margin-bottom: 8px; border-radius: 4px; border-left: 3px solid var(--accent); cursor: grab; font-size: 0.85rem; }
-        .theory-item.verified { border-left-color: var(--verified); color: var(--verified); }
+        h3 { color: var(--accent); font-size: 0.9rem; margin-bottom: 5px; letter-spacing: 1px; }
+        
+        /* Lists */
+        .list-container { overflow-y: auto; flex-grow: 1; margin-bottom: 15px; padding-right: 5px; }
+        .list-container::-webkit-scrollbar { width: 5px; }
+        .list-container::-webkit-scrollbar-thumb { background: var(--border); }
 
-        /* Board Area & Mobile Polish */
+        #search-bar { width: 100%; padding: 8px; background: #000; border: 1px solid var(--border); color: var(--accent); margin-bottom: 10px; box-sizing: border-box; font-family: inherit;}
+        
+        .theory-item { background: #1a1a1a; padding: 10px; margin-bottom: 8px; border-radius: 4px; border-left: 3px solid var(--accent); font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+        .theory-item.draggable { cursor: grab; }
+        .theory-item.proven { border-left-color: var(--verified); color: var(--verified); opacity: 0.8; }
+        
+        .search-icon { cursor: pointer; opacity: 0.6; transition: 0.2s; font-size: 1rem; text-decoration: none; }
+        .search-icon:hover { opacity: 1; transform: scale(1.1); }
+
+        /* Board Area */
         #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #111 0%, #050505 100%); padding: 20px; overflow-y: auto; }
-        h1 { margin: 0 0 10px 0; color: var(--accent); letter-spacing: 4px; text-transform: uppercase; text-align: center; }
+        h1 { margin: 0 0 5px 0; color: var(--accent); letter-spacing: 4px; text-transform: uppercase; text-align: center; }
         
-        .grid { 
-            display: grid; 
-            grid-template-columns: repeat(5, 1fr); 
-            gap: 5px; 
-            width: 100%; 
-            max-width: 550px; 
-            padding: 15px; 
-            background: rgba(57, 255, 20, 0.05); 
-            border-radius: 10px; 
-        }
-        
-        .slot { 
-            background: var(--panel); 
-            border: 1px dashed var(--border); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            text-align: center; 
-            padding: 5px; 
-            font-size: 0.55rem; 
-            transition: 0.3s; 
-            aspect-ratio: 1 / 1; /* Makes squares fluid */
-            overflow: hidden;
-        }
-        
-        @media (min-width: 600px) { .slot { font-size: 0.7rem; } }
+        .board-controls { display: flex; gap: 15px; margin-bottom: 10px; align-items: center; }
+        .btn { background: #111; border: 1px solid var(--accent); color: var(--accent); padding: 8px 15px; cursor: pointer; font-family: inherit; font-weight: bold; transition: 0.2s; font-size: 0.8rem; }
+        .btn:hover { background: rgba(57, 255, 20, 0.2); }
+        .btn.locked { border-color: var(--debunked); color: var(--debunked); }
 
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: 100%; max-width: 600px; padding: 15px; background: rgba(57, 255, 20, 0.05); border-radius: 10px; transition: opacity 0.3s; }
+        .grid.locked { opacity: 0.9; pointer-events: none; } /* Disables interaction when locked */
+        
+        .slot { background: var(--panel); border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 0.6rem; transition: 0.3s; aspect-ratio: 1 / 1; overflow: hidden; position: relative; cursor: pointer; }
+        .slot:hover { border-color: #555; }
         .slot.drag-over { border-color: var(--accent); background: rgba(57, 255, 20, 0.1); }
-        .slot.filled { border-style: solid; border-color: #444; }
-        .slot.verified { border-color: var(--verified); color: var(--verified); }
-        .free-space { color: var(--accent); border: 1px solid var(--accent) !important; font-weight: bold; }
-
-        /* Viral Features */
-        .controls { margin-top: 20px; display: flex; gap: 10px; }
-        button { background: #111; border: 1px solid var(--accent); color: var(--accent); padding: 10px 20px; cursor: pointer; font-family: inherit; font-weight: bold; transition: 0.2s; }
-        button:hover { background: rgba(57, 255, 20, 0.2); }
-
-        @keyframes bingoPulse {
-            0% { box-shadow: inset 0 0 10px var(--accent), 0 0 10px var(--accent); }
-            50% { box-shadow: inset 0 0 30px var(--accent), 0 0 30px var(--accent); background: rgba(57, 255, 20, 0.2); border-color: var(--accent); }
-            100% { box-shadow: inset 0 0 10px var(--accent), 0 0 10px var(--accent); }
-        }
-        .bingo-win { animation: bingoPulse 1s infinite; z-index: 10; }
         
-        /* Mobile adjustment for sidebar */
+        /* Slot States */
+        .slot.filled { border-style: solid; border-color: #444; }
+        .slot.bet-prove { border-color: var(--accent); color: var(--text); box-shadow: inset 0 0 10px rgba(57, 255, 20, 0.1); }
+        .slot.bet-prove::before { content: "BET: PROVE"; position: absolute; top: 2px; left: 2px; font-size: 0.45rem; color: var(--accent); font-weight: bold; }
+        
+        .slot.bet-debunk { border-color: var(--debunked); color: var(--text); box-shadow: inset 0 0 10px rgba(255, 42, 42, 0.1); }
+        .slot.bet-debunk::before { content: "BET: HOAX"; position: absolute; top: 2px; left: 2px; font-size: 0.45rem; color: var(--debunked); font-weight: bold; }
+
+        .free-space { color: var(--accent); border: 1px solid var(--accent) !important; font-weight: bold; cursor: default; }
+
+        @media (min-width: 600px) { .slot { font-size: 0.75rem; } }
         @media (max-width: 768px) {
             body { flex-direction: column; }
             #sidebar { width: 100%; height: 250px; border-right: none; border-bottom: 1px solid var(--border); }
@@ -83,23 +72,37 @@
             <div id="user-info">Status: Anonymous</div>
         </div>
 
-        <input type="text" id="search-bar" placeholder="SEARCH THE ARCHIVES..." onkeyup="filterTheories()">
-        <div id="master-list">Decrypting Airtable...</div>
+        <h3>DECLASSIFIED (PROVEN)</h3>
+        <div class="list-container" id="proven-list" style="max-height: 120px;">
+            <span style="font-size:0.7rem; color:#666;">Decrypting...</span>
+        </div>
+
+        <h3>THE TRUTH VAULT</h3>
+        <input type="text" id="search-bar" placeholder="Search unproven theories..." onkeyup="filterTheories()">
+        <div class="list-container" id="master-list">
+            <span style="font-size:0.7rem; color:#666;">Decrypting...</span>
+        </div>
     </aside>
 
     <main id="main-content">
         <h1>Alien Bingo</h1>
-        <div class="grid" id="bingo-grid"></div>
         
-        <div class="controls">
-            <button onclick="shareBoard()">👽 Share Truth Status</button>
+        <div class="board-controls">
+            <button id="lock-btn" class="btn" onclick="toggleLock()">🔓 Board Unlocked</button>
+            <button class="btn" onclick="shareBoard()">👽 Share Status</button>
         </div>
+
+        <div class="grid" id="bingo-grid"></div>
+        <p style="font-size: 0.65rem; color: #666; margin-top:10px;">
+            Drag to place. Single-click to toggle Prove/Hoax bet. Double-click to remove.
+        </p>
     </main>
 
     <script>
         const CONFIG = { pat: "paty7GMTxGvGOn5mw.4cdc10ef2078c4975e3abf7f4ec245f0515b79136ea7a3f218a7e059b97c4121", baseId: "app7HPN2vsVVOUYaR", tableName: "MasterList" };
         let userEmail = null;
         let allTheories = [];
+        let isLocked = false;
 
         // 1. Init Grid
         const grid = document.getElementById('bingo-grid');
@@ -107,125 +110,181 @@
             const slot = document.createElement('div');
             slot.className = 'slot';
             slot.dataset.index = i;
+            
             if (i === 12) {
                 slot.innerText = "FREE SPACE: THEY ARE HERE";
-                slot.classList.add('free-space', 'filled', 'verified');
+                slot.classList.add('free-space', 'filled', 'bet-prove');
             } else {
-                slot.ondragover = e => { e.preventDefault(); slot.classList.add('drag-over'); };
+                slot.ondragover = e => { e.preventDefault(); if(!isLocked) slot.classList.add('drag-over'); };
                 slot.ondragleave = () => slot.classList.remove('drag-over');
                 slot.ondrop = handleDrop;
+                slot.onclick = toggleBet;
+                slot.ondblclick = clearSlot;
             }
             grid.appendChild(slot);
         }
 
-        // 2. Airtable Fetch & Search
+        // 2. Airtable Fetch & Filter
         async function fetchTheories() {
             try {
                 const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, { headers: { Authorization: `Bearer ${CONFIG.pat}` } });
                 const data = await response.json();
-                allTheories = data.records;
-                renderSidebar(allTheories);
-            } catch (err) { document.getElementById('master-list').innerText = "ERROR: SYSTEM JAMMED"; }
+                allTheories = data.records.filter(r => r.fields.Name); // Only keep valid rows
+                renderSidebar();
+            } catch (err) { console.error("Airtable Error", err); }
         }
 
-        function filterTheories() {
+        function filterTheories() { renderSidebar(); }
+
+        // Get array of names currently on the board
+        function getBoardTheories() {
+            return Array.from(document.querySelectorAll('.slot.filled'))
+                        .map(s => s.dataset.theoryName)
+                        .filter(name => name);
+        }
+
+        function renderSidebar() {
             const query = document.getElementById('search-bar').value.toLowerCase();
-            const filtered = allTheories.filter(r => r.fields.Name && r.fields.Name.toLowerCase().includes(query));
-            renderSidebar(filtered);
-        }
+            const activeBoard = getBoardTheories();
+            
+            const provenList = document.getElementById('proven-list');
+            const masterList = document.getElementById('master-list');
+            provenList.innerHTML = '';
+            masterList.innerHTML = '';
 
-        function renderSidebar(records) {
-            const list = document.getElementById('master-list');
-            list.innerHTML = '';
-            records.forEach(record => {
-                if (!record.fields.Name) return; 
-                const div = document.createElement('div');
-                div.className = `theory-item ${record.fields.Status === 'Verified' ? 'verified' : ''}`;
-                div.innerText = record.fields.Name;
-                div.draggable = true;
-                div.ondragstart = e => e.dataTransfer.setData("text", JSON.stringify({ name: record.fields.Name, status: record.fields.Status }));
-                list.appendChild(div);
-            });
-        }
+            allTheories.forEach(record => {
+                const name = record.fields.Name;
+                const status = record.fields.Status;
+                
+                // Create the search icon link
+                const searchLink = `https://google.com/search?q=${encodeURIComponent(name + " conspiracy theory")}`;
+                const searchHTML = `<a href="${searchLink}" target="_blank" class="search-icon" title="Research this">🔍</a>`;
 
-        // 3. Drop, Persistence & Win Check
-        function handleDrop(e) {
-            e.preventDefault();
-            this.classList.remove('drag-over');
-            const theory = JSON.parse(e.dataTransfer.getData("text"));
-            this.innerText = theory.name;
-            this.classList.add('filled');
-            theory.status === 'Verified' ? this.classList.add('verified') : this.classList.remove('verified');
-            saveBoard();
-            checkBingo(); // Check for win
-        }
-
-        function checkBingo() {
-            const slots = Array.from(document.querySelectorAll('.slot'));
-            slots.forEach(s => s.classList.remove('bingo-win')); // Reset
-
-            const lines = [
-                [0,1,2,3,4], [5,6,7,8,9], [10,11,12,13,14], [15,16,17,18,19], [20,21,22,23,24], // Rows
-                [0,5,10,15,20], [1,6,11,16,21], [2,7,12,17,22], [3,8,13,18,23], [4,9,14,19,24], // Cols
-                [0,6,12,18,24], [4,8,12,16,20] // Diagonals
-            ];
-
-            lines.forEach(line => {
-                // If every slot in this line has the 'verified' class
-                if (line.every(index => slots[index].classList.contains('verified'))) {
-                    line.forEach(index => slots[index].classList.add('bingo-win'));
+                if (status === 'Verified') {
+                    // Populate Declassified (Static)
+                    provenList.innerHTML += `<div class="theory-item proven"><span>${name}</span> ${searchHTML}</div>`;
+                } else {
+                    // Populate Vault (Draggable, Filterable, Unique)
+                    if (!activeBoard.includes(name) && name.toLowerCase().includes(query)) {
+                        const div = document.createElement('div');
+                        div.className = 'theory-item draggable';
+                        div.draggable = true;
+                        div.innerHTML = `<span style="flex-grow:1; padding-right:10px;">${name}</span> ${searchHTML}`;
+                        div.ondragstart = e => e.dataTransfer.setData("text", JSON.stringify({ name: name }));
+                        masterList.appendChild(div);
+                    }
                 }
             });
         }
 
+        // 3. Interactions: Drop, Click, Clear
+        function handleDrop(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            if (isLocked) return;
+
+            const theory = JSON.parse(e.dataTransfer.getData("text"));
+            
+            // Set data and UI
+            this.dataset.theoryName = theory.name;
+            this.dataset.bet = 'prove'; // Default bet
+            this.innerHTML = `<span>${theory.name}</span>`;
+            this.className = 'slot filled bet-prove'; // Reset classes
+            
+            saveBoard();
+            renderSidebar(); // Removes it from tray
+        }
+
+        function toggleBet(e) {
+            // Prevent toggling if clicked the search icon or free space
+            if (isLocked || !this.classList.contains('filled') || this.classList.contains('free-space')) return;
+            
+            if (this.dataset.bet === 'prove') {
+                this.dataset.bet = 'debunk';
+                this.classList.replace('bet-prove', 'bet-debunk');
+            } else {
+                this.dataset.bet = 'prove';
+                this.classList.replace('bet-debunk', 'bet-prove');
+            }
+            saveBoard();
+        }
+
+        function clearSlot(e) {
+            if (isLocked || this.classList.contains('free-space')) return;
+            
+            this.className = 'slot'; // Reset
+            this.innerHTML = '';
+            delete this.dataset.theoryName;
+            delete this.dataset.bet;
+            
+            saveBoard();
+            renderSidebar(); // Adds it back to tray
+        }
+
+        // 4. Locking feature
+        function toggleLock() {
+            isLocked = !isLocked;
+            const btn = document.getElementById('lock-btn');
+            const board = document.getElementById('bingo-grid');
+            
+            if (isLocked) {
+                btn.innerText = "🔒 Board Locked";
+                btn.classList.add('locked');
+                board.classList.add('locked');
+            } else {
+                btn.innerText = "🔓 Board Unlocked";
+                btn.classList.remove('locked');
+                board.classList.remove('locked');
+            }
+        }
+
+        // 5. State Management
         function saveBoard() {
-            const state = Array.from(document.querySelectorAll('.slot')).map(s => ({ text: s.innerText, verified: s.classList.contains('verified') }));
+            const state = Array.from(document.querySelectorAll('.slot')).map(s => ({ 
+                text: s.dataset.theoryName || '', 
+                bet: s.dataset.bet || '' 
+            }));
             localStorage.setItem(`board_${userEmail || 'anon'}`, JSON.stringify(state));
         }
 
         function hydrateBoard(email) {
             const saved = localStorage.getItem(`board_${email}`);
             if (!saved) return;
+            
             const state = JSON.parse(saved);
             const slots = document.querySelectorAll('.slot');
+            
             state.forEach((data, i) => {
-                if (i === 12) return;
-                slots[i].innerText = data.text;
-                if (data.text) slots[i].classList.add('filled');
-                if (data.verified) slots[i].classList.add('verified');
+                if (i === 12 || !data.text) return; // Skip free space or empty
+                slots[i].dataset.theoryName = data.text;
+                slots[i].dataset.bet = data.bet;
+                slots[i].innerHTML = `<span>${data.text}</span>`;
+                slots[i].className = `slot filled bet-${data.bet}`;
             });
-            checkBingo(); // Check for win immediately on load
+            renderSidebar(); // Ensure tray reflects loaded board
         }
 
-        // 4. Viral Share Feature
-        function shareBoard() {
-            const slots = Array.from(document.querySelectorAll('.slot'));
-            let shareText = "I'm exposing the truth on Alien Bingo! 👽\n\n";
-            
-            for (let i = 0; i < 25; i++) {
-                if (i === 12) shareText += "🟨"; // Center Free Space
-                else if (slots[i].classList.contains('verified')) shareText += "🟩";
-                else if (slots[i].classList.contains('filled')) shareText += "⬜";
-                else shareText += "⬛";
-                
-                // Add line break every 5 tiles
-                if ((i + 1) % 5 === 0) shareText += "\n";
-            }
-            
-            shareText += "\nPlay at alienbingo.wtf";
-            
-            navigator.clipboard.writeText(shareText).then(() => {
-                alert("Wordle-style board copied to clipboard! Paste it on your timeline.");
-            }).catch(err => {
-                console.error("Could not copy text: ", err);
-            });
-        }
-
+        // 6. Auth & Viral Share
         function handleSignIn(response) {
             const payload = JSON.parse(atob(response.credential.split('.')[1]));
             userEmail = payload.email;
             document.getElementById('user-info').innerText = `ACCESS GRANTED: ${userEmail}`;
             hydrateBoard(userEmail);
+        }
+
+        function shareBoard() {
+            const slots = Array.from(document.querySelectorAll('.slot'));
+            let shareText = "My AlienBingo.wtf Predictions 👽\n\n";
+            
+            for (let i = 0; i < 25; i++) {
+                if (i === 12) shareText += "🟨"; 
+                else if (slots[i].dataset.bet === 'prove') shareText += "🟩";
+                else if (slots[i].dataset.bet === 'debunk') shareText += "🟥";
+                else shareText += "⬛";
+                
+                if ((i + 1) % 5 === 0) shareText += "\n";
+            }
+            navigator.clipboard.writeText(shareText).then(() => alert("Wordle-style board copied! Past it on your timeline."));
         }
 
         fetchTheories();
