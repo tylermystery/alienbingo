@@ -112,7 +112,7 @@
             });
         }
 
-        // 3. Admin Function: Seed Airtable
+// 3. Admin Function: Seed Airtable
         async function seedAirtable() {
             const seedData = [
                 { fields: { Name: "Epstein DOJ Dumps: Elites confirmed", Status: "Verified" } },
@@ -137,19 +137,24 @@
                         'Authorization': `Bearer ${CONFIG.pat}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ records: seedData })
+                    // THE FIX: Added typecast: true so Airtable auto-creates missing tags
+                    body: JSON.stringify({ records: seedData, typecast: true }) 
                 });
 
-                if (!response.ok) throw new Error("Upload failed. Check scopes.");
+                if (!response.ok) {
+                    const errorDetails = await response.json();
+                    console.error("Airtable Rejection Details:", errorDetails);
+                    throw new Error("Upload failed. Check console for exact Airtable complaint.");
+                }
                 
                 alert("Database Seeded Successfully! Refreshing list...");
                 fetchTheories(); // Refresh the sidebar
             } catch (err) {
                 console.error(err);
-                alert("Failed to seed database. Check console.");
+                alert("Failed to seed database. Check your browser console.");
             }
         }
-
+        
         // 4. Drop & Persistence
         function handleDrop(e) {
             e.preventDefault();
