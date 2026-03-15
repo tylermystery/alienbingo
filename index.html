@@ -9,7 +9,7 @@
         :root { --bg: #050505; --panel: #111; --accent: #39ff14; --verified: #ffd700; --debunked: #ff2a2a; --text: #e0e0e0; --border: #333; }
         body { background-color: var(--bg); color: var(--text); font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* Top Command Center (Toolbar) */
+        /* Top Command Center */
         #toolbar { background: var(--panel); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
         .branding { color: var(--accent); font-weight: bold; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; }
         .toolbar-controls { display: flex; gap: 10px; align-items: center; }
@@ -46,6 +46,7 @@
         .theory-item.proven-static { border-left-color: var(--verified); color: var(--verified); opacity: 0.8; cursor: default; }
         .theory-item.bet-prove { border-left-color: var(--accent); }
         .theory-item.bet-debunk { border-left-color: var(--debunked); color: #ff8888; }
+        .theory-item.bet-ghost { border-left-color: #555; opacity: 0.5; }
         .theory-text { flex-grow: 1; padding-right: 10px; cursor: pointer; pointer-events: none; }
 
         /* Board Area */
@@ -53,37 +54,39 @@
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: 100%; max-width: 650px; padding: 15px; background: rgba(57, 255, 20, 0.05); border-radius: 10px; }
         .grid.locked { opacity: 0.9; pointer-events: none; }
         
-        .slot { background: var(--panel); border: 1px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 0.6rem; transition: 0.3s; aspect-ratio: 1 / 1; overflow: hidden; position: relative; cursor: grab; }
+        .slot { background: var(--panel); border: 1px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 0.6rem; transition: 0.3s; aspect-ratio: 1 / 1; overflow: hidden; position: relative; cursor: pointer; }
         .slot:hover { border-color: #555; }
         .slot.drag-over { border-color: var(--accent); background: rgba(57, 255, 20, 0.1); transform: scale(0.98); }
         
-        /* Slot Ghost (Undo feature) */
-        .slot.ghost { border-style: dotted; border-color: #555; opacity: 0.5; cursor: pointer; }
-        .slot.ghost::after { content: "Click to Undo"; position: absolute; font-size: 0.5rem; color: #888; bottom: 5px; }
-        
+        /* Slot States */
         .slot-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%; word-break: break-word; pointer-events: none; }
-        
         .slot.filled { border-style: solid; border-color: #444; }
+        
         .slot.bet-prove { border-color: var(--accent); color: var(--text); box-shadow: inset 0 0 10px rgba(57, 255, 20, 0.1); }
         .slot.bet-prove::before { content: "PROVE"; position: absolute; top: 2px; left: 2px; font-size: 0.45rem; color: var(--accent); font-weight: bold; }
+        
         .slot.bet-debunk { border-color: var(--debunked); color: var(--text); box-shadow: inset 0 0 10px rgba(255, 42, 42, 0.1); }
         .slot.bet-debunk::before { content: "HOAX"; position: absolute; top: 2px; left: 2px; font-size: 0.45rem; color: var(--debunked); font-weight: bold; }
+        
+        .slot.ghost { border-style: dotted; border-color: #555; opacity: 0.5; }
+        .slot.ghost::after { content: "GHOST"; position: absolute; font-size: 0.45rem; color: #888; bottom: 2px; left: 2px; }
+
         .free-space { color: var(--accent) !important; border: 1px solid var(--accent) !important; font-weight: bold; cursor: default; }
         .free-space::before { display: none; }
 
         @media (min-width: 600px) { .slot { font-size: 0.7rem; } }
 
         /* Truth Lens (Hover Tooltip) */
-        #truth-lens { position: fixed; pointer-events: none; background: rgba(0, 0, 0, 0.9); border: 1px solid var(--accent); padding: 10px; color: #fff; font-size: 0.7rem; z-index: 1000; border-radius: 4px; box-shadow: 0 0 15px rgba(57, 255, 20, 0.2); display: none; max-width: 250px; }
-        .lens-title { color: var(--accent); font-weight: bold; margin-bottom: 5px; display: block;}
-        .lens-desc { color: #aaa; }
+        #truth-lens { position: fixed; pointer-events: none; background: rgba(0, 0, 0, 0.95); border: 1px solid var(--accent); padding: 12px; color: #fff; font-size: 0.75rem; z-index: 1000; border-radius: 4px; box-shadow: 0 0 15px rgba(57, 255, 20, 0.2); display: none; max-width: 280px; }
+        .lens-title { color: var(--accent); font-weight: bold; margin-bottom: 8px; display: block; border-bottom: 1px solid #333; padding-bottom: 4px;}
+        .lens-desc { color: #ccc; line-height: 1.3; }
 
         @media (max-width: 768px) {
             #app-body { flex-direction: column; overflow: auto; }
             #sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); overflow: visible; padding: 15px; box-sizing: border-box;}
             .list-container { max-height: 200px; } 
             .toolbar-controls { flex-wrap: wrap; justify-content: flex-end;}
-            #truth-lens { display: none !important; } /* Disable hover lens on mobile */
+            #truth-lens { display: none !important; } 
         }
     </style>
 </head>
@@ -91,7 +94,7 @@
 
     <div id="truth-lens">
         <span class="lens-title" id="lens-title">Theory</span>
-        <span class="lens-desc">Analyzing data streams... Click to deep dive.</span>
+        <span class="lens-desc">Analyzing data streams...</span>
     </div>
 
     <header id="toolbar">
@@ -117,7 +120,7 @@
     <div id="app-body">
         <aside id="sidebar">
             <div class="auth-box">
-                <div id="g_id_onload" data-client_id="YOUR_GOOGLE_CLIENT_ID" data-callback="handleSignIn" data-auto_prompt="false"></div>
+                <div id="g_id_onload" data-client_id="207125775312-s0hh1a7ojoh6jmu920oic88fn70bo24e.apps.googleusercontent.com" data-callback="handleSignIn" data-auto_prompt="false"></div>
                 <div class="g_id_signin" data-type="standard"></div>
                 <div id="user-info">Status: Anonymous</div>
             </div>
@@ -139,82 +142,41 @@
         <main id="main-content">
             <div class="grid" id="bingo-grid"></div>
             <p style="font-size: 0.65rem; color: #666; margin-top:10px; text-align:center;">
-                Drag to place/swap. Click theory to toggle bet. Dbl-click to remove.
+                Drag to place/swap. Single-click to cycle (Prove/Hoax/Ghost). Dbl-click to remove.
             </p>
         </main>
     </div>
 
     <script>
+        // MVP #1 - Security Note: This PAT is client-side. Limit its Airtable scopes to ONLY read/write for this specific base.
         const CONFIG = { pat: "paty7GMTxGvGOn5mw.4cdc10ef2078c4975e3abf7f4ec245f0515b79136ea7a3f218a7e059b97c4121", baseId: "app7HPN2vsVVOUYaR", tableName: "MasterList" };
         let userEmail = null;
         let activeBoardId = 'alpha';
         let allTheories = [];
+        let theoryDescriptions = {}; // Holds deep-dive text
         let userBets = {}; 
         let isLocked = false;
-        let ghostMemory = null; // Stores last cleared tile for Undo
 
-// --- NEW: Global Dictionary for Descriptions ---
-        let theoryDescriptions = {};
-
-        // --- UPDATED: Truth Lens Logic with Debugs ---
+        // Truth Lens Logic
         const lens = document.getElementById('truth-lens');
         const lensTitle = document.getElementById('lens-title');
-        const lensDesc = document.querySelector('.lens-desc'); // Grab the description element
+        const lensDesc = document.querySelector('.lens-desc');
         
         document.addEventListener('mousemove', (e) => {
-            const target = e.target.closest('.theory-item, .slot.filled');
-            
-            if (target && !isLocked && target.dataset.theoryName) {
+            const target = e.target.closest('.theory-item, .slot[data-theory-name]');
+            if (target && !isLocked && target.dataset.theoryName && !target.classList.contains('free-space')) {
                 const name = target.dataset.theoryName;
-                
-                // DEBUG: Verify hover detection
-                console.log(`[DEBUG] Hover detected on theory: "${name}"`); 
-                
                 lens.style.display = 'block';
-                // Adjust position so it doesn't clip off the bottom/right edges
-                lens.style.left = Math.min(e.pageX + 15, window.innerWidth - 260) + 'px';
+                lens.style.left = Math.min(e.pageX + 15, window.innerWidth - 300) + 'px';
                 lens.style.top = Math.min(e.pageY + 15, window.innerHeight - 100) + 'px';
-                
                 lensTitle.innerText = name;
-                
-                // Pull description or default to a fallback
-                const descText = theoryDescriptions[name] || "Classified: Awaiting further data leaks.";
-                lensDesc.innerText = descText;
-
-                // DEBUG: Verify data injection
-                console.log(`[DEBUG] Injected description: "${descText}"`);
-
+                // Pulls 'Description' column from Airtable.
+                lensDesc.innerText = theoryDescriptions[name] || "Classified: Add a 'Description' column in Airtable to reveal deep dive data.";
             } else {
                 lens.style.display = 'none';
             }
         });
 
-        // --- UPDATED: Airtable Fetch to capture descriptions ---
-        async function fetchTheories() {
-            try {
-                console.log("[DEBUG] Fetching theories from Airtable...");
-                const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, { 
-                    headers: { Authorization: `Bearer ${CONFIG.pat}` } 
-                });
-                const data = await response.json();
-                
-                allTheories = data.records.filter(r => r.fields.Name);
-                
-                // NEW: Populate our descriptions dictionary
-                allTheories.forEach(r => {
-                    // Make sure the column name matches your Airtable EXACTLY
-                    theoryDescriptions[r.fields.Name] = r.fields.Description; 
-                });
-                
-                console.log("[DEBUG] Theory descriptions loaded:", theoryDescriptions);
-
-                if (getBoardTheories().length === 0) randomizeBoard();
-                else renderSidebar();
-            } catch (err) { 
-                console.error("[DEBUG] Airtable Error", err); 
-            }
-        }
-        
         // 1. Init Grid
         const grid = document.getElementById('bingo-grid');
         for (let i = 0; i < 25; i++) {
@@ -230,8 +192,8 @@
                 slot.ondragover = e => { e.preventDefault(); if(!isLocked) slot.classList.add('drag-over'); };
                 slot.ondragleave = () => slot.classList.remove('drag-over');
                 slot.ondrop = handleDrop;
-                slot.onclick = handleSlotClick;
-                slot.ondblclick = triggerClearSlot;
+                slot.onclick = handleSlotClick; // 3-state cycle
+                slot.ondblclick = completelyClearSlot; // Hard remove
                 slot.draggable = true;
                 slot.ondragstart = handleDragStart;
             }
@@ -244,6 +206,12 @@
                 const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, { headers: { Authorization: `Bearer ${CONFIG.pat}` } });
                 const data = await response.json();
                 allTheories = data.records.filter(r => r.fields.Name);
+                
+                // Map Descriptions for Truth Lens
+                allTheories.forEach(r => {
+                    theoryDescriptions[r.fields.Name] = r.fields.Description;
+                });
+
                 if (getBoardTheories().length === 0) randomizeBoard();
                 else renderSidebar();
             } catch (err) { console.error("Airtable Error", err); }
@@ -252,7 +220,7 @@
         function filterTheories() { renderSidebar(); }
 
         function getBoardTheories() {
-            return Array.from(document.querySelectorAll('.slot.filled')).map(s => s.dataset.theoryName).filter(n => n && n !== "THEY ARE HERE");
+            return Array.from(document.querySelectorAll('.slot[data-theory-name]')).map(s => s.dataset.theoryName).filter(n => n && n !== "THEY ARE HERE");
         }
 
         function renderSidebar() {
@@ -266,13 +234,11 @@
 
             let vaultTheories = allTheories.filter(r => r.fields.Status !== 'Verified');
 
-            // Declassified
             allTheories.filter(r => r.fields.Status === 'Verified').forEach(record => {
                 const name = record.fields.Name;
                 provenList.innerHTML += `<div class="theory-item proven-static" data-theory-name="${name.replace(/"/g, '&quot;')}"><span class="theory-text">${name}</span></div>`;
             });
 
-            // Vault
             vaultTheories.forEach(record => {
                 const name = record.fields.Name;
                 if (!activeBoard.includes(name) && name.toLowerCase().includes(query)) {
@@ -281,30 +247,38 @@
                     div.className = `theory-item draggable bet-${betState}`;
                     div.draggable = true;
                     div.dataset.theoryName = name;
-                    
                     div.innerHTML = `<div class="theory-text">${name}</div>`;
+                    
                     div.ondragstart = e => e.dataTransfer.setData("application/json", JSON.stringify({ source: 'vault', name: name }));
-                    div.onclick = () => toggleGlobalBet(name); // Click sidebar to toggle bet
+                    div.onclick = () => cycleGlobalBet(name); 
                     masterList.appendChild(div);
                 }
             });
-            
-            // Re-bind deep dive logic to open google search on double click in sidebar (optional alternative to search icon)
-            document.querySelectorAll('.theory-item').forEach(item => {
-                item.ondblclick = () => window.open(`https://google.com/search?q=${encodeURIComponent(item.dataset.theoryName + " conspiracy theory")}`, '_blank');
-            });
         }
 
-        // 3. Interactions: Global Bets & Deep Dives
-        function toggleGlobalBet(name) {
+        // 3. Interactions: The 3-State Click (Prove -> Debunk -> Ghost)
+        function cycleGlobalBet(name) {
             if (isLocked) return;
-            userBets[name] = userBets[name] === 'prove' ? 'debunk' : 'prove';
+            
+            let currentBet = userBets[name] || 'prove';
+            let nextBet;
+            
+            if (currentBet === 'prove') nextBet = 'debunk';
+            else if (currentBet === 'debunk') nextBet = 'ghost';
+            else nextBet = 'prove';
+
+            userBets[name] = nextBet;
             
             const slot = Array.from(document.querySelectorAll('.slot')).find(s => s.dataset.theoryName === name);
             if (slot && !slot.classList.contains('free-space')) updateSlotUI(slot, name);
             
             saveState();
             renderSidebar();
+        }
+
+        function handleSlotClick(e) {
+            if (isLocked || this.classList.contains('free-space')) return;
+            if (this.dataset.theoryName) cycleGlobalBet(this.dataset.theoryName);
         }
 
         function handleDragStart(e) {
@@ -323,64 +297,35 @@
                 const originSlot = document.querySelector(`.slot[data-index='${data.originIndex}']`);
                 const existingNameHere = this.dataset.theoryName;
                 if (existingNameHere) updateSlotUI(originSlot, existingNameHere); 
-                else clearSlotDOM(originSlot); 
+                else completelyClearSlotDOM(originSlot); 
             }
             
-            if (!userBets[data.name]) userBets[data.name] = 'prove';
+            // Default to prove if dropped fresh from vault
+            if (!userBets[data.name] || userBets[data.name] === 'ghost') userBets[data.name] = 'prove';
             updateSlotUI(this, data.name);
-            ghostMemory = null; // Clear ghost on drop
             
             saveState();
             renderSidebar();
         }
 
-        function handleSlotClick(e) {
-            // If it's a ghost slot, Undo!
-            if (this.classList.contains('ghost') && ghostMemory && ghostMemory.index === this.dataset.index) {
-                updateSlotUI(this, ghostMemory.name);
-                ghostMemory = null;
-                saveState();
-                renderSidebar();
-                return;
-            }
-            // Deep dive on Shift+Click or double-click alternative handled via tooltip prompt
-            if (this.dataset.theoryName && !this.classList.contains('free-space')) {
-                 toggleGlobalBet(this.dataset.theoryName);
-            }
-        }
-
-        function clearSlotDOM(slot) {
+        // Double Click to Hard Remove (Returns to Sidebar)
+        function completelyClearSlotDOM(slot) {
             slot.className = 'slot';
             slot.innerHTML = '';
             delete slot.dataset.theoryName;
         }
 
-        function triggerClearSlot(e) {
+        function completelyClearSlot(e) {
             if (isLocked || this.classList.contains('free-space') || !this.dataset.theoryName) return;
-            
-            // Create Ghost Memory for Undo
-            ghostMemory = { index: this.dataset.index, name: this.dataset.theoryName };
-            
-            clearSlotDOM(this);
-            this.classList.add('ghost'); // Add ghost styling
-            this.innerHTML = `<div class="slot-content">${ghostMemory.name}</div>`;
-            
+            completelyClearSlotDOM(this);
             saveState();
             renderSidebar();
-            
-            // Clear ghost after 4 seconds
-            setTimeout(() => {
-                if (this.classList.contains('ghost')) {
-                    this.classList.remove('ghost');
-                    this.innerHTML = '';
-                }
-            }, 4000);
         }
 
         function clearEntireBoard() {
             if(confirm("Erase all evidence and start a new board?")) {
                 document.querySelectorAll('.slot').forEach(slot => {
-                    if(!slot.classList.contains('free-space')) clearSlotDOM(slot);
+                    if(!slot.classList.contains('free-space')) completelyClearSlotDOM(slot);
                 });
                 saveState();
                 renderSidebar();
@@ -388,10 +333,14 @@
         }
 
         function updateSlotUI(slot, theoryName) {
-            slot.classList.remove('ghost');
             const bet = userBets[theoryName] || 'prove';
             slot.dataset.theoryName = theoryName;
-            slot.className = `slot filled bet-${bet}`;
+            
+            if (bet === 'ghost') {
+                slot.className = `slot ghost`;
+            } else {
+                slot.className = `slot filled bet-${bet}`;
+            }
             slot.innerHTML = `<div class="slot-content">${theoryName}</div>`;
         }
 
@@ -408,10 +357,10 @@
                 if (i === 12) return;
                 if (aIdx < available.length) {
                     const tName = available[aIdx++];
-                    if (!userBets[tName]) userBets[tName] = 'prove';
+                    if (!userBets[tName] || userBets[tName] === 'ghost') userBets[tName] = 'prove';
                     updateSlotUI(slot, tName);
                 } else {
-                    clearSlotDOM(slot);
+                    completelyClearSlotDOM(slot);
                 }
             });
             saveState();
@@ -433,13 +382,13 @@
                 if (i === 12) shareText += "🟨"; 
                 else if (slots[i].classList.contains('bet-prove')) shareText += "🟩";
                 else if (slots[i].classList.contains('bet-debunk')) shareText += "🟥";
-                else shareText += "⬛";
+                else shareText += "⬛"; // Empty or Ghost
                 if ((i + 1) % 5 === 0) shareText += "\n";
             }
             navigator.clipboard.writeText(shareText).then(() => alert("Grid copied! Share it to recruit others."));
         }
 
-        // 5. State Management & Multiple Boards
+        // 5. State Management
         function switchBoard() {
             activeBoardId = document.getElementById('board-profile').value;
             hydrateState(userEmail || 'anon');
@@ -456,8 +405,7 @@
             const saved = localStorage.getItem(fullKey);
             
             if (!saved) {
-                // If switching to a new blank board, clear existing UI
-                document.querySelectorAll('.slot').forEach(s => { if(!s.classList.contains('free-space')) clearSlotDOM(s); });
+                document.querySelectorAll('.slot').forEach(s => { if(!s.classList.contains('free-space')) completelyClearSlotDOM(s); });
                 userBets = {};
                 renderSidebar();
                 return;
@@ -470,7 +418,7 @@
             state.board.forEach((name, i) => {
                 if (i === 12) return;
                 if (name) updateSlotUI(slots[i], name);
-                else clearSlotDOM(slots[i]);
+                else completelyClearSlotDOM(slots[i]);
             });
             renderSidebar();
         }
@@ -482,7 +430,6 @@
             hydrateState(userEmail);
         }
 
-        // Init
         hydrateState('anon');
         fetchTheories();
     </script>
