@@ -148,12 +148,12 @@
     </div>
 
     <script>
-        // MVP #1 - Security Note: This PAT is client-side. Limit its Airtable scopes to ONLY read/write for this specific base.
+// MVP #1 - Security Note: This PAT is client-side. Limit its Airtable scopes to ONLY read/write for this specific base.
         const CONFIG = { pat: "paty7GMTxGvGOn5mw.4cdc10ef2078c4975e3abf7f4ec245f0515b79136ea7a3f218a7e059b97c4121", baseId: "app7HPN2vsVVOUYaR", tableName: "MasterList" };
         let userEmail = null;
         let activeBoardId = 'alpha';
         let allTheories = [];
-        let theoryDescriptions = {}; // Holds deep-dive text
+        let theoryDescriptions = {}; 
         let userBets = {}; 
         let isLocked = false;
 
@@ -170,7 +170,10 @@
                 lens.style.left = Math.min(e.pageX + 15, window.innerWidth - 300) + 'px';
                 lens.style.top = Math.min(e.pageY + 15, window.innerHeight - 100) + 'px';
                 lensTitle.innerText = name;
-                // Pulls 'Description' column from Airtable.
+                
+                // DEBUG: Check what the dictionary holds when hovered
+                console.log(`[DEBUG Lens] Hovered on: "${name}" | Found Description:`, theoryDescriptions[name]);
+                
                 lensDesc.innerText = theoryDescriptions[name] || "Classified: Add a 'Description' column in Airtable to reveal deep dive data.";
             } else {
                 lens.style.display = 'none';
@@ -200,21 +203,31 @@
             grid.appendChild(slot);
         }
 
-        // 2. Airtable Fetch & Filter
+        // 2. Airtable Fetch & Filter WITH DEBUGGING
         async function fetchTheories() {
             try {
+                console.log("[DEBUG Fetch] Initiating call to Airtable...");
                 const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, { headers: { Authorization: `Bearer ${CONFIG.pat}` } });
                 const data = await response.json();
+                
+                // DEBUG: Look at the very first record to see exact column names
+                if (data.records && data.records.length > 0) {
+                    console.log("[DEBUG Fetch] Raw Airtable Fields for First Record:", Object.keys(data.records[0].fields));
+                }
+
                 allTheories = data.records.filter(r => r.fields.Name);
                 
                 // Map Descriptions for Truth Lens
                 allTheories.forEach(r => {
+                    // Make sure 'Description' matches exactly what printed in the log above
                     theoryDescriptions[r.fields.Name] = r.fields.Description;
                 });
+                
+                console.log("[DEBUG Fetch] Populated theoryDescriptions Dictionary:", theoryDescriptions);
 
                 if (getBoardTheories().length === 0) randomizeBoard();
                 else renderSidebar();
-            } catch (err) { console.error("Airtable Error", err); }
+            } catch (err) { console.error("[DEBUG Fetch] Airtable Error:", err); }
         }
 
         function filterTheories() { renderSidebar(); }
