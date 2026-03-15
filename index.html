@@ -7,59 +7,77 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         :root { --bg: #050505; --panel: #111; --accent: #39ff14; --verified: #ffd700; --debunked: #ff2a2a; --text: #e0e0e0; --border: #333; }
-        body { background-color: var(--bg); color: var(--text); font-family: 'Courier New', monospace; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        body { background-color: var(--bg); color: var(--text); font-family: 'Courier New', monospace; margin: 0; display: flex; height: 100vh; }
         
         /* Sidebar */
-        #sidebar { width: 340px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; overflow-y: hidden; }
+        #sidebar { width: 340px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; }
         .auth-box { margin-bottom: 15px; border: 1px solid #222; padding: 10px; border-radius: 4px; }
         #user-info { font-size: 0.7rem; color: var(--accent); margin-top: 5px; }
         
-        h3 { color: var(--accent); font-size: 0.9rem; margin-bottom: 5px; letter-spacing: 1px; }
+        h3 { color: var(--accent); font-size: 0.9rem; margin-bottom: 5px; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center;}
         
         /* Lists */
         .list-container { overflow-y: auto; flex-grow: 1; margin-bottom: 15px; padding-right: 5px; }
         .list-container::-webkit-scrollbar { width: 5px; }
         .list-container::-webkit-scrollbar-thumb { background: var(--border); }
 
-        #search-bar { width: 100%; padding: 8px; background: #000; border: 1px solid var(--border); color: var(--accent); margin-bottom: 10px; box-sizing: border-box; font-family: inherit;}
+        .search-controls { display: flex; gap: 5px; margin-bottom: 10px; }
+        #search-bar { flex-grow: 1; padding: 8px; background: #000; border: 1px solid var(--border); color: var(--accent); box-sizing: border-box; font-family: inherit;}
+        #sort-btn { background: #222; border: 1px solid var(--border); color: var(--text); cursor: pointer; padding: 0 10px; font-family: inherit; }
+
+        .theory-item { background: #1a1a1a; padding: 10px; margin-bottom: 8px; border-radius: 4px; border-left: 3px solid var(--accent); font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; cursor: grab;}
+        .theory-item.proven-static { border-left-color: var(--verified); color: var(--verified); opacity: 0.8; cursor: default; }
         
-        .theory-item { background: #1a1a1a; padding: 10px; margin-bottom: 8px; border-radius: 4px; border-left: 3px solid var(--accent); font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
-        .theory-item.draggable { cursor: grab; }
-        .theory-item.proven { border-left-color: var(--verified); color: var(--verified); opacity: 0.8; }
+        /* Global Bet Colors for Sidebar */
+        .theory-item.bet-prove { border-left-color: var(--accent); }
+        .theory-item.bet-debunk { border-left-color: var(--debunked); color: #ff8888; }
         
-        .search-icon { cursor: pointer; opacity: 0.6; transition: 0.2s; font-size: 1rem; text-decoration: none; }
+        .theory-text { flex-grow: 1; padding-right: 10px; cursor: pointer; }
+        .search-icon { cursor: pointer; opacity: 0.6; transition: 0.2s; font-size: 1rem; text-decoration: none; margin-left: 5px; }
         .search-icon:hover { opacity: 1; transform: scale(1.1); }
 
         /* Board Area */
-        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #111 0%, #050505 100%); padding: 20px; overflow-y: auto; }
-        h1 { margin: 0 0 5px 0; color: var(--accent); letter-spacing: 4px; text-transform: uppercase; text-align: center; }
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: radial-gradient(circle, #111 0%, #050505 100%); padding: 20px; overflow-y: auto; }
+        h1 { margin: 10px 0; color: var(--accent); letter-spacing: 4px; text-transform: uppercase; text-align: center; }
         
-        .board-controls { display: flex; gap: 15px; margin-bottom: 10px; align-items: center; }
-        .btn { background: #111; border: 1px solid var(--accent); color: var(--accent); padding: 8px 15px; cursor: pointer; font-family: inherit; font-weight: bold; transition: 0.2s; font-size: 0.8rem; }
+        .board-controls { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; justify-content: center;}
+        .btn { background: #111; border: 1px solid var(--accent); color: var(--accent); padding: 8px 15px; cursor: pointer; font-family: inherit; font-weight: bold; transition: 0.2s; font-size: 0.8rem; border-radius: 4px; }
         .btn:hover { background: rgba(57, 255, 20, 0.2); }
         .btn.locked { border-color: var(--debunked); color: var(--debunked); }
 
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: 100%; max-width: 600px; padding: 15px; background: rgba(57, 255, 20, 0.05); border-radius: 10px; transition: opacity 0.3s; }
-        .grid.locked { opacity: 0.9; pointer-events: none; } /* Disables interaction when locked */
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: 100%; max-width: 650px; padding: 15px; background: rgba(57, 255, 20, 0.05); border-radius: 10px; transition: opacity 0.3s; }
+        .grid.locked { opacity: 0.9; pointer-events: none; }
         
-        .slot { background: var(--panel); border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 0.6rem; transition: 0.3s; aspect-ratio: 1 / 1; overflow: hidden; position: relative; cursor: pointer; }
+        .slot { background: var(--panel); border: 1px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 0.6rem; transition: 0.3s; aspect-ratio: 1 / 1; overflow: hidden; position: relative; cursor: grab; }
         .slot:hover { border-color: #555; }
-        .slot.drag-over { border-color: var(--accent); background: rgba(57, 255, 20, 0.1); }
+        .slot.drag-over { border-color: var(--accent); background: rgba(57, 255, 20, 0.1); transform: scale(0.98); }
         
+        /* Slot Text & Search Icon layout */
+        .slot-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%; word-break: break-word; pointer-events: none; }
+        .slot-search { position: absolute; bottom: 2px; right: 2px; font-size: 0.7rem; opacity: 0.5; text-decoration: none; z-index: 10; cursor: pointer;}
+        .slot-search:hover { opacity: 1; }
+
         /* Slot States */
         .slot.filled { border-style: solid; border-color: #444; }
         .slot.bet-prove { border-color: var(--accent); color: var(--text); box-shadow: inset 0 0 10px rgba(57, 255, 20, 0.1); }
-        .slot.bet-prove::before { content: "BET: PROVE"; position: absolute; top: 2px; left: 2px; font-size: 0.45rem; color: var(--accent); font-weight: bold; }
+        .slot.bet-prove::before { content: "PROVE"; position: absolute; top: 2px; left: 2px; font-size: 0.45rem; color: var(--accent); font-weight: bold; }
         
         .slot.bet-debunk { border-color: var(--debunked); color: var(--text); box-shadow: inset 0 0 10px rgba(255, 42, 42, 0.1); }
-        .slot.bet-debunk::before { content: "BET: HOAX"; position: absolute; top: 2px; left: 2px; font-size: 0.45rem; color: var(--debunked); font-weight: bold; }
+        .slot.bet-debunk::before { content: "HOAX"; position: absolute; top: 2px; left: 2px; font-size: 0.45rem; color: var(--debunked); font-weight: bold; }
 
-        .free-space { color: var(--accent); border: 1px solid var(--accent) !important; font-weight: bold; cursor: default; }
+        .free-space { color: var(--accent) !important; border: 1px solid var(--accent) !important; font-weight: bold; cursor: default; }
+        .free-space::before { display: none; }
 
-        @media (min-width: 600px) { .slot { font-size: 0.75rem; } }
+        @media (min-width: 600px) { .slot { font-size: 0.7rem; } }
+        
+        /* Mobile Overrides */
         @media (max-width: 768px) {
-            body { flex-direction: column; }
-            #sidebar { width: 100%; height: 250px; border-right: none; border-bottom: 1px solid var(--border); }
+            body { flex-direction: column; height: auto; overflow: auto; }
+            #sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); overflow: visible; padding: 15px; box-sizing: border-box;}
+            .list-container { max-height: 250px; } /* Constrain lists on mobile so user can scroll past them */
+            #main-content { overflow: visible; padding: 10px; }
+            .grid { padding: 10px; gap: 3px; }
+            .slot { font-size: 0.5rem; }
         }
     </style>
 </head>
@@ -77,24 +95,31 @@
             <span style="font-size:0.7rem; color:#666;">Decrypting...</span>
         </div>
 
-        <h3>THE TRUTH VAULT</h3>
-        <input type="text" id="search-bar" placeholder="Search unproven theories..." onkeyup="filterTheories()">
+        <h3>
+            THE TRUTH VAULT 
+            <span style="font-size: 0.7rem; cursor:pointer;" onclick="randomizeBoard()" title="Auto-fill board">🎲 Fill Board</span>
+        </h3>
+        <div class="search-controls">
+            <input type="text" id="search-bar" placeholder="Search..." onkeyup="filterTheories()">
+            <button id="sort-btn" onclick="toggleSort()">A-Z</button>
+        </div>
         <div class="list-container" id="master-list">
             <span style="font-size:0.7rem; color:#666;">Decrypting...</span>
         </div>
     </aside>
 
     <main id="main-content">
-        <h1>Alien Bingo</h1>
+        <h1>Alien Bingo.wtf</h1>
         
         <div class="board-controls">
-            <button id="lock-btn" class="btn" onclick="toggleLock()">🔓 Board Unlocked</button>
-            <button class="btn" onclick="shareBoard()">👽 Share Status</button>
+            <button class="btn" onclick="randomizeBoard()">🎲 Randomize</button>
+            <button id="lock-btn" class="btn" onclick="toggleLock()">🔓 Unlocked</button>
+            <button class="btn" onclick="shareBoard()">👽 Share</button>
         </div>
 
         <div class="grid" id="bingo-grid"></div>
-        <p style="font-size: 0.65rem; color: #666; margin-top:10px;">
-            Drag to place. Single-click to toggle Prove/Hoax bet. Double-click to remove.
+        <p style="font-size: 0.65rem; color: #666; margin-top:10px; text-align:center;">
+            Drag to place/swap. Click theory to toggle Prove/Hoax. Dbl-click to remove.
         </p>
     </main>
 
@@ -102,7 +127,9 @@
         const CONFIG = { pat: "paty7GMTxGvGOn5mw.4cdc10ef2078c4975e3abf7f4ec245f0515b79136ea7a3f218a7e059b97c4121", baseId: "app7HPN2vsVVOUYaR", tableName: "MasterList" };
         let userEmail = null;
         let allTheories = [];
+        let userBets = {}; // Global store for bets: { "Theory": "prove" | "debunk" }
         let isLocked = false;
+        let sortAZ = true;
 
         // 1. Init Grid
         const grid = document.getElementById('bingo-grid');
@@ -112,14 +139,18 @@
             slot.dataset.index = i;
             
             if (i === 12) {
-                slot.innerText = "FREE SPACE: THEY ARE HERE";
+                slot.innerHTML = `<div class="slot-content">THEY ARE HERE</div>`;
                 slot.classList.add('free-space', 'filled', 'bet-prove');
             } else {
                 slot.ondragover = e => { e.preventDefault(); if(!isLocked) slot.classList.add('drag-over'); };
                 slot.ondragleave = () => slot.classList.remove('drag-over');
                 slot.ondrop = handleDrop;
-                slot.onclick = toggleBet;
+                slot.onclick = handleSlotClick;
                 slot.ondblclick = clearSlot;
+                
+                // Allow dragging FROM board TO board (Swapping)
+                slot.draggable = true;
+                slot.ondragstart = handleDragStart;
             }
             grid.appendChild(slot);
         }
@@ -129,18 +160,23 @@
             try {
                 const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, { headers: { Authorization: `Bearer ${CONFIG.pat}` } });
                 const data = await response.json();
-                allTheories = data.records.filter(r => r.fields.Name); // Only keep valid rows
-                renderSidebar();
+                allTheories = data.records.filter(r => r.fields.Name);
+                
+                // If board is empty, auto-populate
+                if (getBoardTheories().length === 0) randomizeBoard();
+                else renderSidebar();
             } catch (err) { console.error("Airtable Error", err); }
         }
 
         function filterTheories() { renderSidebar(); }
+        function toggleSort() { 
+            sortAZ = !sortAZ; 
+            document.getElementById('sort-btn').innerText = sortAZ ? "A-Z" : "Z-A";
+            renderSidebar(); 
+        }
 
-        // Get array of names currently on the board
         function getBoardTheories() {
-            return Array.from(document.querySelectorAll('.slot.filled'))
-                        .map(s => s.dataset.theoryName)
-                        .filter(name => name);
+            return Array.from(document.querySelectorAll('.slot.filled')).map(s => s.dataset.theoryName).filter(n => n);
         }
 
         function renderSidebar() {
@@ -152,143 +188,192 @@
             provenList.innerHTML = '';
             masterList.innerHTML = '';
 
-            allTheories.forEach(record => {
-                const name = record.fields.Name;
-                const status = record.fields.Status;
-                
-                // Create the search icon link
-                const searchLink = `https://google.com/search?q=${encodeURIComponent(name + " conspiracy theory")}`;
-                const searchHTML = `<a href="${searchLink}" target="_blank" class="search-icon" title="Research this">🔍</a>`;
+            let vaultTheories = allTheories.filter(r => r.fields.Status !== 'Verified');
+            
+            // Sort
+            vaultTheories.sort((a, b) => {
+                const nameA = a.fields.Name.toLowerCase();
+                const nameB = b.fields.Name.toLowerCase();
+                return sortAZ ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+            });
 
-                if (status === 'Verified') {
-                    // Populate Declassified (Static)
-                    provenList.innerHTML += `<div class="theory-item proven"><span>${name}</span> ${searchHTML}</div>`;
-                } else {
-                    // Populate Vault (Draggable, Filterable, Unique)
-                    if (!activeBoard.includes(name) && name.toLowerCase().includes(query)) {
-                        const div = document.createElement('div');
-                        div.className = 'theory-item draggable';
-                        div.draggable = true;
-                        div.innerHTML = `<span style="flex-grow:1; padding-right:10px;">${name}</span> ${searchHTML}`;
-                        div.ondragstart = e => e.dataTransfer.setData("text", JSON.stringify({ name: name }));
-                        masterList.appendChild(div);
-                    }
+            // Render Declassified
+            allTheories.filter(r => r.fields.Status === 'Verified').forEach(record => {
+                const name = record.fields.Name;
+                const searchLink = `https://google.com/search?q=${encodeURIComponent(name + " conspiracy theory")}`;
+                provenList.innerHTML += `<div class="theory-item proven-static"><span>${name}</span> <a href="${searchLink}" target="_blank" class="search-icon">🔍</a></div>`;
+            });
+
+            // Render Vault
+            vaultTheories.forEach(record => {
+                const name = record.fields.Name;
+                if (!activeBoard.includes(name) && name.toLowerCase().includes(query)) {
+                    // Get current bet state
+                    const betState = userBets[name] || 'prove';
+                    
+                    const div = document.createElement('div');
+                    div.className = `theory-item draggable bet-${betState}`;
+                    div.draggable = true;
+                    
+                    const searchLink = `https://google.com/search?q=${encodeURIComponent(name + " conspiracy theory")}`;
+                    div.innerHTML = `
+                        <div class="theory-text" onclick="toggleGlobalBet('${name.replace(/'/g, "\\'")}')">${name}</div> 
+                        <a href="${searchLink}" target="_blank" class="search-icon">🔍</a>
+                    `;
+                    
+                    div.ondragstart = e => e.dataTransfer.setData("application/json", JSON.stringify({ source: 'vault', name: name }));
+                    masterList.appendChild(div);
                 }
             });
         }
 
-        // 3. Interactions: Drop, Click, Clear
+        // 3. Interactions: Global Bets
+        function toggleGlobalBet(name) {
+            if (isLocked) return;
+            userBets[name] = userBets[name] === 'prove' ? 'debunk' : 'prove';
+            
+            // Update Board UI if it's there
+            const slot = Array.from(document.querySelectorAll('.slot')).find(s => s.dataset.theoryName === name);
+            if (slot) updateSlotUI(slot, name);
+            
+            saveState();
+            renderSidebar();
+        }
+
+        // 4. Drag, Drop, and Swapping
+        function handleDragStart(e) {
+            if (isLocked || !this.dataset.theoryName) { e.preventDefault(); return; }
+            e.dataTransfer.setData("application/json", JSON.stringify({ source: 'board', name: this.dataset.theoryName, originIndex: this.dataset.index }));
+        }
+
         function handleDrop(e) {
             e.preventDefault();
             this.classList.remove('drag-over');
             if (isLocked) return;
 
-            const theory = JSON.parse(e.dataTransfer.getData("text"));
+            const data = JSON.parse(e.dataTransfer.getData("application/json"));
             
-            // Set data and UI
-            this.dataset.theoryName = theory.name;
-            this.dataset.bet = 'prove'; // Default bet
-            this.innerHTML = `<span>${theory.name}</span>`;
-            this.className = 'slot filled bet-prove'; // Reset classes
+            if (data.source === 'board') {
+                // Swapping logic
+                const originSlot = document.querySelector(`.slot[data-index='${data.originIndex}']`);
+                const existingNameHere = this.dataset.theoryName;
+                
+                if (existingNameHere) updateSlotUI(originSlot, existingNameHere); // Move current to origin
+                else clearSlotDOM(originSlot); // Or clear origin if empty
+            }
             
-            saveBoard();
-            renderSidebar(); // Removes it from tray
+            // Place new item here
+            if (!userBets[data.name]) userBets[data.name] = 'prove';
+            updateSlotUI(this, data.name);
+            
+            saveState();
+            renderSidebar();
         }
 
-        function toggleBet(e) {
-            // Prevent toggling if clicked the search icon or free space
-            if (isLocked || !this.classList.contains('filled') || this.classList.contains('free-space')) return;
-            
-            if (this.dataset.bet === 'prove') {
-                this.dataset.bet = 'debunk';
-                this.classList.replace('bet-prove', 'bet-debunk');
-            } else {
-                this.dataset.bet = 'prove';
-                this.classList.replace('bet-debunk', 'bet-prove');
-            }
-            saveBoard();
+        function handleSlotClick(e) {
+            if (e.target.classList.contains('slot-search')) return; // Ignore search icon clicks
+            if (this.dataset.theoryName) toggleGlobalBet(this.dataset.theoryName);
+        }
+
+        function clearSlotDOM(slot) {
+            slot.className = 'slot';
+            slot.innerHTML = '';
+            delete slot.dataset.theoryName;
         }
 
         function clearSlot(e) {
-            if (isLocked || this.classList.contains('free-space')) return;
-            
-            this.className = 'slot'; // Reset
-            this.innerHTML = '';
-            delete this.dataset.theoryName;
-            delete this.dataset.bet;
-            
-            saveBoard();
-            renderSidebar(); // Adds it back to tray
+            if (isLocked || this.classList.contains('free-space') || !this.dataset.theoryName) return;
+            clearSlotDOM(this);
+            saveState();
+            renderSidebar();
         }
 
-        // 4. Locking feature
+        function updateSlotUI(slot, theoryName) {
+            const bet = userBets[theoryName] || 'prove';
+            slot.dataset.theoryName = theoryName;
+            slot.className = `slot filled bet-${bet}`;
+            const searchLink = `https://google.com/search?q=${encodeURIComponent(theoryName + " conspiracy theory")}`;
+            slot.innerHTML = `
+                <div class="slot-content">${theoryName}</div>
+                <a href="${searchLink}" target="_blank" class="slot-search" title="Deep Dive">🔍</a>
+            `;
+        }
+
+        // 5. Randomize Board
+        function randomizeBoard() {
+            if (isLocked) return;
+            let available = allTheories.filter(t => t.fields.Status !== 'Verified').map(t => t.fields.Name);
+            available.sort(() => Math.random() - 0.5); // Shuffle
+            
+            const slots = document.querySelectorAll('.slot');
+            let aIdx = 0;
+            
+            slots.forEach((slot, i) => {
+                if (i === 12) return;
+                if (aIdx < available.length) {
+                    const tName = available[aIdx++];
+                    if (!userBets[tName]) userBets[tName] = 'prove'; // Default bet
+                    updateSlotUI(slot, tName);
+                }
+            });
+            saveState();
+            renderSidebar();
+        }
+
+        // 6. Board Tools
         function toggleLock() {
             isLocked = !isLocked;
             const btn = document.getElementById('lock-btn');
             const board = document.getElementById('bingo-grid');
-            
-            if (isLocked) {
-                btn.innerText = "🔒 Board Locked";
-                btn.classList.add('locked');
-                board.classList.add('locked');
-            } else {
-                btn.innerText = "🔓 Board Unlocked";
-                btn.classList.remove('locked');
-                board.classList.remove('locked');
-            }
-        }
-
-        // 5. State Management
-        function saveBoard() {
-            const state = Array.from(document.querySelectorAll('.slot')).map(s => ({ 
-                text: s.dataset.theoryName || '', 
-                bet: s.dataset.bet || '' 
-            }));
-            localStorage.setItem(`board_${userEmail || 'anon'}`, JSON.stringify(state));
-        }
-
-        function hydrateBoard(email) {
-            const saved = localStorage.getItem(`board_${email}`);
-            if (!saved) return;
-            
-            const state = JSON.parse(saved);
-            const slots = document.querySelectorAll('.slot');
-            
-            state.forEach((data, i) => {
-                if (i === 12 || !data.text) return; // Skip free space or empty
-                slots[i].dataset.theoryName = data.text;
-                slots[i].dataset.bet = data.bet;
-                slots[i].innerHTML = `<span>${data.text}</span>`;
-                slots[i].className = `slot filled bet-${data.bet}`;
-            });
-            renderSidebar(); // Ensure tray reflects loaded board
-        }
-
-        // 6. Auth & Viral Share
-        function handleSignIn(response) {
-            const payload = JSON.parse(atob(response.credential.split('.')[1]));
-            userEmail = payload.email;
-            document.getElementById('user-info').innerText = `ACCESS GRANTED: ${userEmail}`;
-            hydrateBoard(userEmail);
+            if (isLocked) { btn.innerText = "🔒 Locked"; btn.classList.add('locked'); board.classList.add('locked'); }
+            else { btn.innerText = "🔓 Unlocked"; btn.classList.remove('locked'); board.classList.remove('locked'); }
         }
 
         function shareBoard() {
             const slots = Array.from(document.querySelectorAll('.slot'));
             let shareText = "My AlienBingo.wtf Predictions 👽\n\n";
-            
             for (let i = 0; i < 25; i++) {
                 if (i === 12) shareText += "🟨"; 
-                else if (slots[i].dataset.bet === 'prove') shareText += "🟩";
-                else if (slots[i].dataset.bet === 'debunk') shareText += "🟥";
+                else if (slots[i].classList.contains('bet-prove')) shareText += "🟩";
+                else if (slots[i].classList.contains('bet-debunk')) shareText += "🟥";
                 else shareText += "⬛";
-                
                 if ((i + 1) % 5 === 0) shareText += "\n";
             }
-            navigator.clipboard.writeText(shareText).then(() => alert("Wordle-style board copied! Past it on your timeline."));
+            navigator.clipboard.writeText(shareText).then(() => alert("Grid copied! Paste it on your timeline."));
         }
 
+        // 7. State Management & Auth
+        function saveState() {
+            const boardState = Array.from(document.querySelectorAll('.slot')).map(s => s.dataset.theoryName || '');
+            localStorage.setItem(`state_${userEmail || 'anon'}`, JSON.stringify({ board: boardState, bets: userBets }));
+        }
+
+        function hydrateState(email) {
+            const saved = localStorage.getItem(`state_${email}`);
+            if (!saved) return;
+            
+            const state = JSON.parse(saved);
+            userBets = state.bets || {};
+            
+            const slots = document.querySelectorAll('.slot');
+            state.board.forEach((name, i) => {
+                if (i === 12) return;
+                if (name) updateSlotUI(slots[i], name);
+                else clearSlotDOM(slots[i]);
+            });
+            renderSidebar();
+        }
+
+        function handleSignIn(response) {
+            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+            userEmail = payload.email;
+            document.getElementById('user-info').innerText = `ACCESS GRANTED: ${userEmail}`;
+            hydrateState(userEmail);
+        }
+
+        // Init
+        hydrateState('anon');
         fetchTheories();
-        window.onload = () => hydrateBoard('anon');
     </script>
 </body>
 </html>
