@@ -6,90 +6,26 @@
     <title>Alien Bingo | The Truth Vault</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        :root {
-            --bg: #050505;
-            --panel: #111111;
-            --accent: #39ff14; 
-            --verified: #ffd700; 
-            --text: #e0e0e0;
-            --border: #333;
-        }
-
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: 'Courier New', Courier, monospace;
-            margin: 0;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        #sidebar {
-            width: 320px;
-            background: var(--panel);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-        }
-
+        :root { --bg: #050505; --panel: #111; --accent: #39ff14; --verified: #ffd700; --text: #e0e0e0; --border: #333; }
+        body { background-color: var(--bg); color: var(--text); font-family: 'Courier New', monospace; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Sidebar & Search */
+        #sidebar { width: 320px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; }
         .auth-box { margin-bottom: 20px; border: 1px solid #222; padding: 10px; border-radius: 4px; }
         #user-info { font-size: 0.7rem; color: var(--accent); margin-top: 5px; }
+        #search-bar { width: 100%; padding: 10px; background: #000; border: 1px solid var(--border); color: var(--accent); margin-bottom: 10px; box-sizing: border-box; }
 
-        #master-list {
-            flex-grow: 1;
-            overflow-y: auto;
-            margin-top: 10px;
-        }
-
-        .theory-item {
-            background: #1a1a1a;
-            padding: 12px;
-            margin-bottom: 8px;
-            border-radius: 4px;
-            border-left: 3px solid var(--accent);
-            cursor: grab;
-            font-size: 0.85rem;
-        }
-
+        #master-list { flex-grow: 1; overflow-y: auto; }
+        .theory-item { background: #1a1a1a; padding: 12px; margin-bottom: 8px; border-radius: 4px; border-left: 3px solid var(--accent); cursor: grab; font-size: 0.85rem; }
         .theory-item.verified { border-left-color: var(--verified); color: var(--verified); }
 
-        #main-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(circle, #111 0%, #050505 100%);
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(5, 110px);
-            grid-template-rows: repeat(5, 110px);
-            gap: 10px;
-            padding: 20px;
-            background: rgba(57, 255, 20, 0.05);
-            border-radius: 10px;
-        }
-
-        .slot {
-            background: var(--panel);
-            border: 1px dashed var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 5px;
-            font-size: 0.65rem;
-            transition: 0.3s;
-        }
-
+        /* Board */
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #111 0%, #050505 100%); }
+        .grid { display: grid; grid-template-columns: repeat(5, 110px); grid-template-rows: repeat(5, 110px); gap: 10px; padding: 20px; background: rgba(57, 255, 20, 0.05); border-radius: 10px; }
+        .slot { background: var(--panel); border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 0.65rem; transition: 0.3s; }
         .slot.drag-over { border-color: var(--accent); background: rgba(57, 255, 20, 0.1); }
         .slot.filled { border-style: solid; border-color: #444; }
-        .slot.verified { border-color: var(--verified); color: var(--verified); box-shadow: inset 0 0 10px rgba(255, 215, 0, 0.1); }
-
+        .slot.verified { border-color: var(--verified); color: var(--verified); }
         .free-space { color: var(--accent); border: 1px solid var(--accent) !important; font-weight: bold; }
         h1 { margin: 0 0 20px 0; color: var(--accent); letter-spacing: 4px; text-transform: uppercase; }
     </style>
@@ -98,16 +34,12 @@
 
     <aside id="sidebar">
         <div class="auth-box">
-            <div id="g_id_onload"
-                 data-client_id="207125775312-s0hh1a7ojoh6jmu920oic88fn70bo24e.apps.googleusercontent.com"
-                 data-callback="handleSignIn"
-                 data-auto_prompt="false">
-            </div>
+            <div id="g_id_onload" data-client_id="207125775312-s0hh1a7ojoh6jmu920oic88fn70bo24e.apps.googleusercontent.com" data-callback="handleSignIn" data-auto_prompt="false"></div>
             <div class="g_id_signin" data-type="standard"></div>
             <div id="user-info">Status: Anonymous</div>
         </div>
 
-        <h3 style="color:var(--accent)">THE TRUTH LIST</h3>
+        <input type="text" id="search-bar" placeholder="SEARCH THE ARCHIVES..." onkeyup="filterTheories()">
         <div id="master-list">Decrypting Airtable...</div>
     </aside>
 
@@ -117,19 +49,16 @@
     </main>
 
     <script>
-        const CONFIG = {
-            pat: "paty7GMTxGvGOn5mw.4cdc10ef2078c4975e3abf7f4ec245f0515b79136ea7a3f218a7e059b97c4121",
-            baseId: "app7HPN2vsVVOUYaR",
-            tableName: "MasterList"
-        };
-
+        const CONFIG = { pat: "paty7GMTxGvGOn5mw.4cdc10ef2078c4975e3abf7f4ec245f0515b79136ea7a3f218a7e059b97c4121", baseId: "app7HPN2vsVVOUYaR", tableName: "MasterList" };
         let userEmail = null;
+        let allTheories = [];
 
-        // Create Grid
+        // 1. Init Grid
         const grid = document.getElementById('bingo-grid');
         for (let i = 0; i < 25; i++) {
             const slot = document.createElement('div');
             slot.className = 'slot';
+            slot.dataset.index = i;
             if (i === 12) {
                 slot.innerText = "FREE SPACE: THE CHOSEN ONE";
                 slot.classList.add('free-space', 'filled', 'verified');
@@ -141,36 +70,36 @@
             grid.appendChild(slot);
         }
 
+        // 2. Airtable Fetch & Search
         async function fetchTheories() {
             try {
-                const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, {
-                    headers: { Authorization: `Bearer ${CONFIG.pat}` }
-                });
-                if (!response.ok) throw new Error("Airtable Access Denied - Check Scopes");
+                const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, { headers: { Authorization: `Bearer ${CONFIG.pat}` } });
                 const data = await response.json();
-                renderSidebar(data.records);
-            } catch (err) {
-                console.error(err);
-                document.getElementById('master-list').innerText = "ERROR: SYSTEM JAMMED";
-            }
+                allTheories = data.records;
+                renderSidebar(allTheories);
+            } catch (err) { document.getElementById('master-list').innerText = "ERROR: SYSTEM JAMMED"; }
+        }
+
+        function filterTheories() {
+            const query = document.getElementById('search-bar').value.toLowerCase();
+            const filtered = allTheories.filter(r => r.fields.Name.toLowerCase().includes(query));
+            renderSidebar(filtered);
         }
 
         function renderSidebar(records) {
             const list = document.getElementById('master-list');
             list.innerHTML = '';
             records.forEach(record => {
-                const fields = record.fields;
                 const div = document.createElement('div');
-                div.className = `theory-item ${fields.Status === 'Verified' ? 'verified' : ''}`;
-                div.innerText = fields.Name;
+                div.className = `theory-item ${record.fields.Status === 'Verified' ? 'verified' : ''}`;
+                div.innerText = record.fields.Name;
                 div.draggable = true;
-                div.ondragstart = e => {
-                    e.dataTransfer.setData("text", JSON.stringify({ name: fields.Name, status: fields.Status }));
-                };
+                div.ondragstart = e => e.dataTransfer.setData("text", JSON.stringify({ name: record.fields.Name, status: record.fields.Status }));
                 list.appendChild(div);
             });
         }
 
+        // 3. Drop & Persistence
         function handleDrop(e) {
             e.preventDefault();
             this.classList.remove('drag-over');
@@ -178,16 +107,36 @@
             this.innerText = theory.name;
             this.classList.add('filled');
             theory.status === 'Verified' ? this.classList.add('verified') : this.classList.remove('verified');
+            saveBoard();
+        }
+
+        function saveBoard() {
+            const state = Array.from(document.querySelectorAll('.slot')).map(s => ({ text: s.innerText, verified: s.classList.contains('verified') }));
+            localStorage.setItem(`board_${userEmail || 'anon'}`, JSON.stringify(state));
+        }
+
+        function hydrateBoard(email) {
+            const saved = localStorage.getItem(`board_${email}`);
+            if (!saved) return;
+            const state = JSON.parse(saved);
+            const slots = document.querySelectorAll('.slot');
+            state.forEach((data, i) => {
+                if (i === 12) return;
+                slots[i].innerText = data.text;
+                if (data.text) slots[i].classList.add('filled');
+                if (data.verified) slots[i].classList.add('verified');
+            });
         }
 
         function handleSignIn(response) {
             const payload = JSON.parse(atob(response.credential.split('.')[1]));
             userEmail = payload.email;
-            document.getElementById('user-info').innerText = `Logged in as: ${userEmail}`;
-            console.log("Welcome, Initiate.");
+            document.getElementById('user-info').innerText = `ACCESS GRANTED: ${userEmail}`;
+            hydrateBoard(userEmail);
         }
 
         fetchTheories();
+        window.onload = () => hydrateBoard('anon');
     </script>
 </body>
 </html>
