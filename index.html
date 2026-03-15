@@ -14,7 +14,6 @@
         #user-info { font-size: 0.7rem; color: var(--accent); margin-top: 5px; }
         #search-bar { width: 100%; padding: 10px; background: #000; border: 1px solid var(--border); color: var(--accent); margin-bottom: 10px; box-sizing: border-box; }
         
-        /* Admin Button Styling */
         #admin-controls { margin-bottom: 15px; }
         .admin-btn { width: 100%; padding: 8px; background: #222; border: 1px dashed #ffd700; color: #ffd700; cursor: pointer; font-family: inherit; font-size: 0.8rem; }
         .admin-btn:hover { background: #333; }
@@ -112,7 +111,7 @@
             });
         }
 
-// 3. Admin Function: Seed Airtable
+        // 3. Admin Function: Seed Airtable (NOW WITH CHUNKING)
         async function seedAirtable() {
             const seedData = [
                 { fields: { Name: "Epstein DOJ Dumps: Elites confirmed", Status: "Verified" } },
@@ -130,28 +129,34 @@
             ];
 
             try {
-                document.getElementById('master-list').innerText = "Uploading to Vault...";
-                const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, {
-                    method: 'POST',
-                    headers: { 
-                        'Authorization': `Bearer ${CONFIG.pat}`,
-                        'Content-Type': 'application/json'
-                    },
-                    // THE FIX: Added typecast: true so Airtable auto-creates missing tags
-                    body: JSON.stringify({ records: seedData, typecast: true }) 
-                });
+                document.getElementById('master-list').innerText = "Uploading to Vault in batches...";
+                
+                // Airtable limits POST requests to 10 records at a time.
+                for (let i = 0; i < seedData.length; i += 10) {
+                    const chunk = seedData.slice(i, i + 10);
+                    
+                    const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, {
+                        method: 'POST',
+                        headers: { 
+                            'Authorization': `Bearer ${CONFIG.pat}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ records: chunk, typecast: true }) 
+                    });
 
-                if (!response.ok) {
-                    const errorDetails = await response.json();
-                    console.error("Airtable Rejection Details:", errorDetails);
-                    throw new Error("Upload failed. Check console for exact Airtable complaint.");
+                    if (!response.ok) {
+                        const errorDetails = await response.json();
+                        // Enhanced Debug Log
+                        console.error("Airtable Rejection Details:", JSON.stringify(errorDetails, null, 2));
+                        throw new Error(`Upload failed on batch. Airtable says: ${errorDetails.error.message || 'Check console'}`);
+                    }
                 }
                 
                 alert("Database Seeded Successfully! Refreshing list...");
                 fetchTheories(); // Refresh the sidebar
             } catch (err) {
                 console.error(err);
-                alert("Failed to seed database. Check your browser console.");
+                alert("Failed to seed database. Check your browser console for the exact error.");
             }
         }
         
