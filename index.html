@@ -9,8 +9,8 @@
         :root {
             --bg: #050505;
             --panel: #111111;
-            --accent: #39ff14; /* Alien Green */
-            --verified: #ffd700; /* Gold */
+            --accent: #39ff14; 
+            --verified: #ffd700; 
             --text: #e0e0e0;
             --border: #333;
         }
@@ -25,21 +25,6 @@
             overflow: hidden;
         }
 
-        /* --- ROADMAP SECTION --- */
-        #roadmap {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 1px solid var(--accent);
-            padding: 10px;
-            font-size: 10px;
-            z-index: 1000;
-            max-width: 200px;
-            display: none; /* Toggle this for dev */
-        }
-
-        /* --- SIDEBAR --- */
         #sidebar {
             width: 320px;
             background: var(--panel);
@@ -49,7 +34,8 @@
             padding: 20px;
         }
 
-        .auth-box { margin-bottom: 20px; }
+        .auth-box { margin-bottom: 20px; border: 1px solid #222; padding: 10px; border-radius: 4px; }
+        #user-info { font-size: 0.7rem; color: var(--accent); margin-top: 5px; }
 
         #master-list {
             flex-grow: 1;
@@ -65,13 +51,10 @@
             border-left: 3px solid var(--accent);
             cursor: grab;
             font-size: 0.85rem;
-            transition: 0.2s;
         }
 
-        .theory-item:hover { background: #222; }
         .theory-item.verified { border-left-color: var(--verified); color: var(--verified); }
 
-        /* --- BINGO BOARD --- */
         #main-content {
             flex-grow: 1;
             display: flex;
@@ -83,8 +66,8 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(5, 120px);
-            grid-template-rows: repeat(5, 120px);
+            grid-template-columns: repeat(5, 110px);
+            grid-template-rows: repeat(5, 110px);
             gap: 10px;
             padding: 20px;
             background: rgba(57, 255, 20, 0.05);
@@ -98,47 +81,34 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 10px;
-            font-size: 0.7rem;
+            padding: 5px;
+            font-size: 0.65rem;
             transition: 0.3s;
-            position: relative;
         }
 
         .slot.drag-over { border-color: var(--accent); background: rgba(57, 255, 20, 0.1); }
-        .slot.filled { border-style: solid; }
-        .slot.verified { 
-            border-color: var(--verified); 
-            box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.2);
-            color: var(--verified);
-        }
+        .slot.filled { border-style: solid; border-color: #444; }
+        .slot.verified { border-color: var(--verified); color: var(--verified); box-shadow: inset 0 0 10px rgba(255, 215, 0, 0.1); }
 
         .free-space { color: var(--accent); border: 1px solid var(--accent) !important; font-weight: bold; }
-        
         h1 { margin: 0 0 20px 0; color: var(--accent); letter-spacing: 4px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-    <div id="roadmap">
-        <strong>V1 ROADMAP</strong><br>
-        [X] Airtable Integration<br>
-        [X] Drag & Drop UI<br>
-        [ ] Google SSO Linkage<br>
-        [ ] Proxy Server for PAT Protection<br>
-        [ ] Mobile Responsiveness
-    </div>
-
     <aside id="sidebar">
         <div class="auth-box">
             <div id="g_id_onload"
-                 data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
-                 data-callback="handleSignIn">
+                 data-client_id="207125775312-s0hh1a7ojoh6jmu920oic88fn70bo24e.apps.googleusercontent.com"
+                 data-callback="handleSignIn"
+                 data-auto_prompt="false">
             </div>
             <div class="g_id_signin" data-type="standard"></div>
+            <div id="user-info">Status: Anonymous</div>
         </div>
 
         <h3 style="color:var(--accent)">THE TRUTH LIST</h3>
-        <div id="master-list">Loading the archives...</div>
+        <div id="master-list">Decrypting Airtable...</div>
     </aside>
 
     <main id="main-content">
@@ -149,19 +119,19 @@
     <script>
         const CONFIG = {
             pat: "paty7GMTxGvGOn5mw.4cdc10ef2078c4975e3abf7f4ec245f0515b79136ea7a3f218a7e059b97c4121",
-            baseId: "app7HPN2vsVVOUYaR", // Replace with actual Base ID if 'AlienBingo' is just the name
+            baseId: "app7HPN2vsVVOUYaR",
             tableName: "MasterList"
         };
 
         let userEmail = null;
 
-        // 1. Initialize Board Slots
+        // Create Grid
         const grid = document.getElementById('bingo-grid');
         for (let i = 0; i < 25; i++) {
             const slot = document.createElement('div');
             slot.className = 'slot';
             if (i === 12) {
-                slot.innerText = "FREE SPACE: THEY ARE HERE";
+                slot.innerText = "FREE SPACE: THE CHOSEN ONE";
                 slot.classList.add('free-space', 'filled', 'verified');
             } else {
                 slot.ondragover = e => { e.preventDefault(); slot.classList.add('drag-over'); };
@@ -171,17 +141,17 @@
             grid.appendChild(slot);
         }
 
-        // 2. Fetch Master List from Airtable
         async function fetchTheories() {
             try {
                 const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, {
                     headers: { Authorization: `Bearer ${CONFIG.pat}` }
                 });
+                if (!response.ok) throw new Error("Airtable Access Denied - Check Scopes");
                 const data = await response.json();
                 renderSidebar(data.records);
             } catch (err) {
-                console.error("Airtable Connection Failed:", err);
-                document.getElementById('master-list').innerText = "CONNECTION FAILED: SYSTEM OFFLINE";
+                console.error(err);
+                document.getElementById('master-list').innerText = "ERROR: SYSTEM JAMMED";
             }
         }
 
@@ -194,7 +164,6 @@
                 div.className = `theory-item ${fields.Status === 'Verified' ? 'verified' : ''}`;
                 div.innerText = fields.Name;
                 div.draggable = true;
-                div.dataset.status = fields.Status;
                 div.ondragstart = e => {
                     e.dataTransfer.setData("text", JSON.stringify({ name: fields.Name, status: fields.Status }));
                 };
@@ -202,38 +171,22 @@
             });
         }
 
-        // 3. Drag and Drop Logic
         function handleDrop(e) {
             e.preventDefault();
             this.classList.remove('drag-over');
             const theory = JSON.parse(e.dataTransfer.getData("text"));
-            
             this.innerText = theory.name;
             this.classList.add('filled');
-            if (theory.status === 'Verified') this.classList.add('verified');
-            else this.classList.remove('verified');
-            
-            saveBoardState();
+            theory.status === 'Verified' ? this.classList.add('verified') : this.classList.remove('verified');
         }
 
-        // 4. Auth & Save
         function handleSignIn(response) {
             const payload = JSON.parse(atob(response.credential.split('.')[1]));
             userEmail = payload.email;
-            alert(`Logged in as ${userEmail}. Your board is now syncing.`);
-            // Future: fetchUserBoard(userEmail);
+            document.getElementById('user-info').innerText = `Logged in as: ${userEmail}`;
+            console.log("Welcome, Initiate.");
         }
 
-        function saveBoardState() {
-            if (!userEmail) {
-                console.log("Local save: Sign in to sync to the cloud.");
-                // For now, save to localStorage
-                const boardData = Array.from(document.querySelectorAll('.slot')).map(s => s.innerText);
-                localStorage.setItem('alien_bingo_local', JSON.stringify(boardData));
-            }
-        }
-
-        // Run on load
         fetchTheories();
     </script>
 </body>
