@@ -153,22 +153,68 @@
         let isLocked = false;
         let ghostMemory = null; // Stores last cleared tile for Undo
 
-        // Truth Lens Logic
+// --- NEW: Global Dictionary for Descriptions ---
+        let theoryDescriptions = {};
+
+        // --- UPDATED: Truth Lens Logic with Debugs ---
         const lens = document.getElementById('truth-lens');
         const lensTitle = document.getElementById('lens-title');
+        const lensDesc = document.querySelector('.lens-desc'); // Grab the description element
         
         document.addEventListener('mousemove', (e) => {
             const target = e.target.closest('.theory-item, .slot.filled');
+            
             if (target && !isLocked && target.dataset.theoryName) {
+                const name = target.dataset.theoryName;
+                
+                // DEBUG: Verify hover detection
+                console.log(`[DEBUG] Hover detected on theory: "${name}"`); 
+                
                 lens.style.display = 'block';
-                lens.style.left = (e.pageX + 15) + 'px';
-                lens.style.top = (e.pageY + 15) + 'px';
-                lensTitle.innerText = target.dataset.theoryName;
+                // Adjust position so it doesn't clip off the bottom/right edges
+                lens.style.left = Math.min(e.pageX + 15, window.innerWidth - 260) + 'px';
+                lens.style.top = Math.min(e.pageY + 15, window.innerHeight - 100) + 'px';
+                
+                lensTitle.innerText = name;
+                
+                // Pull description or default to a fallback
+                const descText = theoryDescriptions[name] || "Classified: Awaiting further data leaks.";
+                lensDesc.innerText = descText;
+
+                // DEBUG: Verify data injection
+                console.log(`[DEBUG] Injected description: "${descText}"`);
+
             } else {
                 lens.style.display = 'none';
             }
         });
 
+        // --- UPDATED: Airtable Fetch to capture descriptions ---
+        async function fetchTheories() {
+            try {
+                console.log("[DEBUG] Fetching theories from Airtable...");
+                const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, { 
+                    headers: { Authorization: `Bearer ${CONFIG.pat}` } 
+                });
+                const data = await response.json();
+                
+                allTheories = data.records.filter(r => r.fields.Name);
+                
+                // NEW: Populate our descriptions dictionary
+                allTheories.forEach(r => {
+                    // Make sure the column name matches your Airtable EXACTLY
+                    theoryDescriptions[r.fields.Name] = r.fields.Description; 
+                });
+                
+                console.log("[DEBUG] Theory descriptions loaded:", theoryDescriptions);
+
+                if (getBoardTheories().length === 0) randomizeBoard();
+                else renderSidebar();
+            } catch (err) { 
+                console.error("[DEBUG] Airtable Error", err); 
+            }
+        }
+        
         // 1. Init Grid
         const grid = document.getElementById('bingo-grid');
         for (let i = 0; i < 25; i++) {
