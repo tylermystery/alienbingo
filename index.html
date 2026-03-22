@@ -6,7 +6,7 @@
     <title>Alien Bingo | The Truth Vault</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        :root { --bg: #050505; --panel: #111; --accent: #39ff14; --verified: #ffd700; --debunked: #ff2a2a; --text: #e0e0e0; --border: #333; }
+        :root { --bg: #050505; --panel: #111; --panel-light: #1a1a1a; --accent: #39ff14; --verified: #ffd700; --debunked: #ff2a2a; --text: #e0e0e0; --border: #333; }
         body { background-color: var(--bg); color: var(--text); font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
         /* Top Command Center */
@@ -18,6 +18,7 @@
         .btn { background: #111; border: 1px solid var(--accent); color: var(--accent); padding: 6px 12px; cursor: pointer; font-family: inherit; font-weight: bold; transition: 0.2s; font-size: 0.75rem; border-radius: 4px; }
         .btn:hover { background: rgba(57, 255, 20, 0.2); }
         .btn.locked { border-color: var(--debunked); color: var(--debunked); }
+        .btn-mobile-vault { display: none; background: var(--accent); color: #000; border: none; }
         
         /* Dropdown Menu */
         .dropdown { position: relative; display: inline-block; }
@@ -27,10 +28,10 @@
         .dropdown:hover .dropdown-content { display: block; }
 
         /* Main Layout */
-        #app-body { display: flex; flex-grow: 1; overflow: hidden; }
+        #app-body { display: flex; flex-grow: 1; overflow: hidden; position: relative; }
 
-        /* Sidebar */
-        #sidebar { width: 340px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; }
+        /* Sidebar (Vault) */
+        #sidebar { width: 340px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; z-index: 50; transition: transform 0.3s ease; }
         .auth-box { margin-bottom: 15px; border: 1px solid #222; padding: 10px; border-radius: 4px; display: flex; flex-direction: column; gap: 5px; }
         #user-info { font-size: 0.7rem; color: var(--accent); }
         h3 { color: var(--accent); font-size: 0.85rem; margin-bottom: 5px; letter-spacing: 1px; }
@@ -42,21 +43,23 @@
         .search-controls { display: flex; gap: 5px; margin-bottom: 10px; }
         #search-bar { flex-grow: 1; padding: 8px; background: #000; border: 1px solid var(--border); color: var(--accent); box-sizing: border-box; font-family: inherit;}
 
-        .theory-item { background: #1a1a1a; padding: 10px; margin-bottom: 8px; border-radius: 4px; border-left: 3px solid var(--accent); font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; cursor: grab;}
+        .theory-item { background: var(--panel-light); padding: 10px; margin-bottom: 8px; border-radius: 4px; border-left: 3px solid var(--accent); font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; cursor: pointer;}
+        .theory-item:hover { background: #222; }
         .theory-item.proven-static { border-left-color: var(--verified); color: var(--verified); opacity: 0.8; cursor: default; }
         .theory-item.bet-prove { border-left-color: var(--accent); }
         .theory-item.bet-debunk { border-left-color: var(--debunked); color: #ff8888; }
         .theory-item.bet-ghost { border-left-color: #555; opacity: 0.5; }
-        .theory-text { flex-grow: 1; padding-right: 10px; cursor: pointer; pointer-events: none; }
+        .theory-item.active-hold { outline: 2px solid var(--accent); background: #000; }
+        .theory-text { flex-grow: 1; padding-right: 10px; pointer-events: none; }
 
         /* Board Area */
-        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: radial-gradient(circle, #111 0%, #050505 100%); padding: 20px; overflow-y: auto; }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: 100%; max-width: 650px; padding: 15px; background: rgba(57, 255, 20, 0.05); border-radius: 10px; }
-        .grid.locked { opacity: 0.9; pointer-events: none; }
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: radial-gradient(circle, #111 0%, #050505 100%); padding: 20px; overflow-y: auto; position: relative; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: 100%; max-width: 650px; padding: 15px; background: rgba(57, 255, 20, 0.05); border-radius: 10px; transition: 0.3s;}
+        .grid.locked { border: 1px solid var(--border); background: rgba(0,0,0,0.5); }
         
-        .slot { background: var(--panel); border: 1px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 0.6rem; transition: 0.3s; aspect-ratio: 1 / 1; overflow: hidden; position: relative; cursor: grab; }
-        .slot:hover { border-color: #555; }
-        .slot.drag-over { border-color: var(--accent); background: rgba(57, 255, 20, 0.1); transform: scale(0.98); }
+        .slot { background: var(--panel); border: 1px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 0.6rem; transition: 0.2s; aspect-ratio: 1 / 1; position: relative; cursor: pointer; user-select: none;}
+        .slot:hover { border-color: #666; }
+        .slot.pulse { border-color: var(--accent); box-shadow: 0 0 10px rgba(57,255,20,0.3); }
         
         /* Slot States */
         .slot-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%; word-break: break-word; pointer-events: none; }
@@ -68,70 +71,97 @@
         .slot.bet-debunk { border-color: var(--debunked); color: var(--text); box-shadow: inset 0 0 10px rgba(255, 42, 42, 0.1); }
         .slot.bet-debunk::before { content: "HOAX"; position: absolute; top: 2px; left: 2px; font-size: 0.45rem; color: var(--debunked); font-weight: bold; }
         
-        .slot.ghost { border-style: dotted; border-color: #555; opacity: 0.5; cursor: pointer; }
+        .slot.ghost { border-style: dotted; border-color: #555; opacity: 0.5; }
         .slot.ghost::after { content: "GHOST"; position: absolute; font-size: 0.45rem; color: #888; bottom: 2px; left: 2px; }
 
         .free-space { color: var(--accent) !important; border: 1px solid var(--accent) !important; font-weight: bold; cursor: default; }
         .free-space::before { display: none; }
 
-        @media (min-width: 600px) { .slot { font-size: 0.7rem; } }
+        /* Notification Dot */
+        .intel-badge { position: absolute; top: -4px; right: -4px; width: 10px; height: 10px; background-color: var(--debunked); border-radius: 50%; box-shadow: 0 0 5px var(--debunked); display: none; }
+        .slot.has-intel .intel-badge { display: block; }
 
-        /* Truth Lens (Hover Tooltip) */
-        #truth-lens { position: fixed; pointer-events: none; background: rgba(0, 0, 0, 0.95); border: 1px solid var(--accent); padding: 12px; color: #fff; font-size: 0.75rem; z-index: 1000; border-radius: 4px; box-shadow: 0 0 15px rgba(57, 255, 20, 0.2); display: none; max-width: 280px; }
-        .lens-title { color: var(--accent); font-weight: bold; margin-bottom: 8px; display: block; border-bottom: 1px solid #333; padding-bottom: 4px;}
-        .lens-desc { color: #ccc; line-height: 1.3; }
+        /* Holding Banner (Active placement) */
+        #holding-banner { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #000; padding: 10px 20px; border-radius: 30px; font-weight: bold; font-size: 0.85rem; display: none; align-items: center; gap: 15px; z-index: 100; box-shadow: 0 4px 15px rgba(57,255,20,0.4);}
+        #holding-banner button { background: #000; color: var(--accent); border: none; padding: 4px 10px; border-radius: 15px; cursor: pointer; font-family: inherit; font-size: 0.7rem; font-weight: bold;}
 
         /* Dossier Modal (Research Area) */
         #dossier-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 2000; justify-content: center; align-items: center; }
         #dossier-window { background: var(--panel); border: 1px solid var(--accent); width: 100%; max-width: 500px; padding: 25px; border-radius: 8px; box-shadow: 0 0 30px rgba(57, 255, 20, 0.2); position: relative;}
         
-        #dossier-content { max-height: 400px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.8rem; line-height: 1.4;}
+        #dossier-content { max-height: 400px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.8rem; line-height: 1.4; padding-right:10px;}
+        #dossier-content::-webkit-scrollbar { width: 4px; }
+        #dossier-content::-webkit-scrollbar-thumb { background: var(--accent); }
         #dossier-content h3 { font-size: 1.1rem; text-transform: uppercase; margin: 0 0 15px 0; }
-        #dossier-content p { margin: 0 0 10px 0; }
-        .dossier-news { background: #1a1a1a; padding: 10px; border-left: 3px solid var(--verified); margin-top: 10px; font-size: 0.75rem; color: #ffd700;}
+        .dossier-news { background: var(--panel-light); padding: 10px; border-left: 3px solid var(--verified); margin-top: 10px; font-size: 0.75rem; color: #ffd700;}
+
+        /* Betting Action Buttons inside Dossier */
+        .dossier-actions { display: flex; gap: 10px; margin-top: 20px; border-top: 1px solid #333; padding-top: 15px; }
+        .dossier-actions button { flex: 1; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; font-family: inherit;}
+        .btn-prove { background: #000; border: 1px solid var(--accent); color: var(--accent); }
+        .btn-hoax { background: #000; border: 1px solid var(--debunked); color: var(--debunked); }
+        .btn-ghost { background: #000; border: 1px dashed #888; color: #888; }
+        .btn-prove:hover { background: rgba(57, 255, 20, 0.2); }
+        .btn-hoax:hover { background: rgba(255, 42, 42, 0.2); }
+        .btn-ghost:hover { background: rgba(255, 255, 255, 0.1); }
+
+        .close-dossier { position: absolute; top: 10px; right: 15px; background: none; border: none; color: #888; font-size: 1.2rem; cursor: pointer; }
 
         @media (max-width: 768px) {
-            #app-body { flex-direction: column; overflow: auto; }
-            #sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); overflow: visible; padding: 15px; box-sizing: border-box;}
-            .list-container { max-height: 200px; } 
-            .toolbar-controls { flex-wrap: wrap; justify-content: flex-end;}
-            #truth-lens { display: none !important; } 
-            #dossier-window { width: 90%; }
+            #toolbar { padding: 10px; }
+            .branding { font-size: 1rem; }
+            .btn-mobile-vault { display: block; }
+            .toolbar-controls { gap: 5px; }
+            
+            #sidebar { position: absolute; top: 0; left: -100%; height: 100%; width: 85%; box-shadow: 10px 0 20px rgba(0,0,0,0.8); }
+            #sidebar.open { left: 0; }
+            
+            .grid { padding: 5px; gap: 3px; }
+            .slot { font-size: 0.55rem; padding: 2px;}
+            #dossier-window { width: 90%; padding: 15px; }
+            .dossier-actions { flex-direction: column; gap: 5px; }
         }
     </style>
 </head>
 <body>
 
+    <div id="holding-banner">
+        <span>Placing: <span id="holding-text" style="text-decoration: underline;"></span></span>
+        <button onclick="cancelHold()">Drop</button>
+    </div>
+
     <div id="dossier-modal">
         <div id="dossier-window">
+            <button class="close-dossier" onclick="closeModal()">×</button>
             <div id="dossier-content">
                 <h3 style="color:var(--accent);">Encrypting secure channels...</h3>
                 <p>Decrypting secure channels...</p>
             </div>
-            <button onclick="closeModal()" class="btn" style="width:100%; margin-top:15px;">Close Dossier</button>
+            
+            <div class="dossier-actions" id="dossier-actions-container" style="display:none;">
+                <button class="btn-prove" onclick="submitBet('prove')">🟩 PROVE</button>
+                <button class="btn-hoax" onclick="submitBet('debunk')">🟥 HOAX</button>
+                <button class="btn-ghost" onclick="submitBet('ghost')">⬛ GHOST</button>
+            </div>
         </div>
     </div>
 
-    <div id="truth-lens">
-        <span class="lens-title" id="lens-title">Theory</span>
-        <span class="lens-desc">Analyzing data streams...</span>
-    </div>
-
     <header id="toolbar">
-        <div class="branding">AlienBingo.wtf</div>
+        <div class="branding">AlienBingo</div>
         <div class="toolbar-controls">
+            <button class="btn btn-mobile-vault" onclick="toggleMobileVault()">👽 VAULT</button>
             <select id="board-profile" class="board-select" onchange="switchBoard()">
-                <option value="alpha">Board: Alpha</option>
-                <option value="beta">Board: Beta</option>
+                <option value="alpha">Alpha Board</option>
+                <option value="beta">Beta Board</option>
             </select>
-            <button class="btn" onclick="randomizeBoard()">🎲 Shuffle</button>
-            <button id="lock-btn" class="btn" onclick="toggleLock()">🔓 Unlocked</button>
-            <button class="btn" onclick="shareBoard()">👽 Invite/Share</button>
+            <button id="lock-btn" class="btn" onclick="toggleLock()">🔓 EDIT MODE</button>
             
             <div class="dropdown">
                 <button class="btn">⋮</button>
                 <div class="dropdown-content">
-                    <a onclick="clearEntireBoard()">Clear Board</a>
+                    <a onclick="randomizeBoard()">🎲 Shuffle Board</a>
+                    <a onclick="shareBoard()">📤 Share/Invite</a>
+                    <a onclick="clearEntireBoard()" style="color:var(--debunked);">🗑 Clear Board</a>
                 </div>
             </div>
         </div>
@@ -145,61 +175,45 @@
                 <div id="user-info">Status: Anonymous</div>
             </div>
 
-            <h3>DECLASSIFIED (PROVEN)</h3>
-            <div class="list-container" id="proven-list" style="max-height: 100px;">
-                <span style="font-size:0.7rem; color:#666;">Decrypting...</span>
-            </div>
-
-            <h3>THE TRUTH VAULT</h3>
-            <div class="search-controls">
-                <input type="text" id="search-bar" placeholder="Search..." onkeyup="filterTheories()">
+            <div class="search-controls" style="margin-top:10px;">
+                <input type="text" id="search-bar" placeholder="Search the Vault..." onkeyup="renderSidebar()">
             </div>
             <div class="list-container" id="master-list">
                 <span style="font-size:0.7rem; color:#666;">Decrypting...</span>
             </div>
+
+            <h3 style="margin-top:10px;">DECLASSIFIED</h3>
+            <div class="list-container" id="proven-list" style="max-height: 80px;">
+                <span style="font-size:0.7rem; color:#666;">Decrypting...</span>
+            </div>
+            
+            <button class="btn" style="display: block; width:100%; margin-top:10px;" onclick="toggleMobileVault()" id="close-vault-btn">Close Vault</button>
         </aside>
 
-        <main id="main-content">
-            <div class="grid" id="bingo-grid"></div>
-            <p style="font-size: 0.65rem; color: #666; margin-top:10px; text-align:center;">
-                Drag to place/swap. Single-click to cycle bet. Double-click to deep dive.
+        <main id="main-content" onclick="handleMainClick(event)">
+            <p id="mode-indicator" style="font-size: 0.7rem; color: var(--accent); margin:0 0 10px 0; letter-spacing:1px;">
+                STATUS: EDITING. Tap vault, then tap grid.
             </p>
+            <div class="grid" id="bingo-grid"></div>
         </main>
     </div>
 
     <script>
-        // MVP #1 Configuration
+        // MVP #1 Configuration & Webhook
         const CONFIG = { pat: "paty7GMTxGvGOn5mw.4cdc10ef2078c4975e3abf7f4ec245f0515b79136ea7a3f218a7e059b97c4121", baseId: "app7HPN2vsVVOUYaR", tableName: "MasterList" };
-        
-        // YOUR SECURE ENGINE (The self-healing trigger)
         const WEBHOOK_URL = "https://hook.us2.make.com/g56t7hep1fchr4bkpg9s29su9hzhgu40";
 
+        // Global State
         let userEmail = null;
         let activeBoardId = 'alpha';
         let allTheories = [];
-        let theoryDataStore = {}; // Global dictionary to hold description, news, id, and time
+        let theoryDataStore = {}; 
         let userBets = {}; 
         let isLocked = false;
-
-        // Truth Lens Logic
-        const lens = document.getElementById('truth-lens');
-        const lensTitle = document.getElementById('lens-title');
-        const lensDesc = document.querySelector('.lens-desc');
         
-        document.addEventListener('mousemove', (e) => {
-            const target = e.target.closest('.theory-item, .slot[data-theory-name]');
-            if (target && !isLocked && target.dataset.theoryName && !target.classList.contains('free-space')) {
-                const name = target.dataset.theoryName;
-                lens.style.display = 'block';
-                lens.style.left = Math.min(e.pageX + 15, window.innerWidth - 300) + 'px';
-                lens.style.top = Math.min(e.pageY + 15, window.innerHeight - 100) + 'px';
-                lensTitle.innerText = name;
-                // Teaser from Airtable 'Description'
-                lensDesc.innerText = theoryDataStore[name]?.description || "Analyzing secure frequencies. Add lore to Airtable 'Description' to reveal.";
-            } else {
-                lens.style.display = 'none';
-            }
-        });
+        // Tap-to-Swap State
+        let heldTheory = null;
+        let activeDossierTheory = null;
 
         // 1. Init Grid
         const grid = document.getElementById('bingo-grid');
@@ -213,13 +227,13 @@
                 slot.classList.add('free-space', 'filled', 'bet-prove');
                 slot.dataset.theoryName = "THEY ARE HERE";
             } else {
-                slot.ondragover = e => { e.preventDefault(); if(!isLocked) slot.classList.add('drag-over'); };
-                slot.ondragleave = () => slot.classList.remove('drag-over');
-                slot.ondrop = handleDrop;
-                slot.onclick = handleSlotClick; // 3-state cycle
-                slot.ondblclick = handleSlotDblClick; // Dossier open
-                slot.draggable = true;
-                slot.ondragstart = handleDragStart;
+                // Remove all drag events, add single click
+                slot.onclick = () => handleSlotClick(i); 
+                
+                // Add Notification Dot div
+                const dot = document.createElement('div');
+                dot.className = 'intel-badge';
+                slot.appendChild(dot);
             }
             grid.appendChild(slot);
         }
@@ -231,23 +245,23 @@
                 const data = await response.json();
                 allTheories = data.records.filter(r => r.fields.Name);
                 
-                // Populate global dictionary (The Dossier Brain)
                 allTheories.forEach(r => {
                     theoryDataStore[r.fields.Name] = {
                         id: r.id,
                         status: r.fields.Status,
-                        description: r.fields.Description, // From Long text column
-                        latestIntel: r.fields.Latest_Intel, // Make.com pushes here
-                        updatedTime: r.fields.Last_Updated // Make.com timestamp pushes here
+                        description: r.fields.Description,
+                        latestIntel: r.fields.Latest_Intel, 
+                        updatedTime: r.fields.Last_Updated 
                     };
                 });
 
                 if (getBoardTheories().length === 0) randomizeBoard();
-                else renderSidebar();
+                else {
+                    hydrateGridUI(); // Ensure badges show
+                    renderSidebar();
+                }
             } catch (err) { console.error("Airtable Error", err); }
         }
-
-        function filterTheories() { renderSidebar(); }
 
         function getBoardTheories() {
             return Array.from(document.querySelectorAll('.slot[data-theory-name]')).map(s => s.dataset.theoryName).filter(n => n && n !== "THEY ARE HERE");
@@ -266,179 +280,257 @@
 
             allTheories.filter(r => r.fields.Status === 'Verified').forEach(record => {
                 const name = record.fields.Name;
-                provenList.innerHTML += `<div class="theory-item proven-static" data-theory-name="${name.replace(/"/g, '&quot;')}"><span class="theory-text">${name}</span></div>`;
+                provenList.innerHTML += `<div class="theory-item proven-static"><span class="theory-text">${name}</span></div>`;
             });
 
             vaultTheories.forEach(record => {
                 const name = record.fields.Name;
                 if (!activeBoard.includes(name) && name.toLowerCase().includes(query)) {
                     const betState = userBets[name] || 'prove';
+                    const isHeld = (heldTheory === name);
+                    
                     const div = document.createElement('div');
-                    div.className = `theory-item draggable bet-${betState}`;
-                    div.draggable = true;
+                    div.className = `theory-item bet-${betState} ${isHeld ? 'active-hold' : ''}`;
                     div.dataset.theoryName = name;
                     div.innerHTML = `<div class="theory-text">${name}</div>`;
                     
-                    div.ondragstart = e => e.dataTransfer.setData("application/json", JSON.stringify({ source: 'vault', name: name }));
-                    div.onclick = () => cycleGlobalBet(name); // Cycle bet in sidebar
+                    div.onclick = () => handleVaultItemClick(name);
                     masterList.appendChild(div);
                 }
             });
-            
-            // Allow opening dossier from sidebar
-            document.querySelectorAll('.theory-item').forEach(item => {
-                item.ondblclick = () => {
-                    if (item.dataset.theoryName) openTruthDossier(item.dataset.theoryName);
-                };
-            });
+
+            // Adjust mobile close button visibility
+            document.getElementById('close-vault-btn').style.display = window.innerWidth <= 768 ? 'block' : 'none';
         }
 
-        // 3. Interactions: Cycle bet & Open Dossier (The Research layer)
-        function cycleGlobalBet(name) {
-            if (isLocked) return;
-            let currentBet = userBets[name] || 'prove';
-            let nextBet;
-            if (currentBet === 'prove') nextBet = 'debunk';
-            else if (currentBet === 'debunk') nextBet = 'ghost';
-            else nextBet = 'prove';
-            userBets[name] = nextBet;
-            
-            const slot = Array.from(document.querySelectorAll('.slot')).find(s => s.dataset.theoryName === name);
-            if (slot && !slot.classList.contains('free-space')) updateSlotUI(slot, name);
-            saveState();
-            renderSidebar();
+        // 3. The New Interaction Engine (Tap-to-Swap & Dossier)
+        
+        function handleVaultItemClick(theoryName) {
+            if (isLocked) {
+                openTruthDossier(theoryName);
+                if(window.innerWidth <= 768) toggleMobileVault(); // close vault on mobile
+            } else {
+                heldTheory = theoryName;
+                updateHoldingBanner();
+                renderSidebar();
+                if(window.innerWidth <= 768) toggleMobileVault(); // Auto-close to let them place it
+            }
         }
 
-        function handleSlotClick(e) {
-            if (isLocked || this.classList.contains('free-space')) return;
-            if (this.dataset.theoryName) cycleGlobalBet(this.dataset.theoryName);
-        }
+        function handleSlotClick(index) {
+            if (index === 12) return; // Free space immune
+            const slot = document.querySelector(`.slot[data-index='${index}']`);
+            const nameHere = slot.dataset.theoryName;
 
-        function handleSlotDblClick(e) {
-            if (isLocked || !this.dataset.theoryName || this.classList.contains('free-space')) return;
-            openTruthDossier(this.dataset.theoryName);
-        }
-
-        // The Self-Healing "Dossier" Logic
-        async function openTruthDossier(theoryName) {
-            const theoryData = theoryDataStore[theoryName];
-            const modal = document.getElementById('dossier-modal');
-            const contentBox = document.getElementById('dossier-content');
-            
-            // 1. Open Modal with loading prompt
-            modal.style.display = 'flex';
-            contentBox.innerHTML = `
-                <h3 style="color:var(--accent);">${theoryName}</h3>
-                <p>Establishing secure network...</p>
-                <div class="dossier-news">Decrypting live signals... Monitoring frequencies...</div>
-            `;
-
-            // 2. Check if data is stale (> 24 hours old) or never fetched
-            const lastUpdated = new Date(theoryData.updatedTime || 0);
-            const now = new Date();
-            const hoursSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60);
-
-            if (hoursSinceUpdate > 24 && theoryName !== "THEY ARE HERE") {
-                console.log("[DEBUG] Stale data detected. Triggering Make.com Webhook...");
-                
-                contentBox.innerHTML = `
-                    <h3 style="color:var(--accent);">${theoryName}</h3>
-                    <p style="color:#ffd700;">Intel outdated (>24h). SILENT_TRIGGER: Running live scrape on backchannels...</p>
-                    <div class="dossier-news">Searching secure network for new data packets...</div>
-                `;
-
-                try {
-                    // CLEAN THE SEARCH QUERY to prevent GNews syntax errors
-                    const cleanSearchQuery = theoryName.split(':')[0].trim();
-
-                    // SILENT TRIGGER: Ping Make.com
-                    await fetch(WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            recordId: theoryData.id, 
-                            theoryName: cleanSearchQuery 
-                        })
-                    });
-
-                    // Wait 2.5 seconds to give Make time to update Airtable
-                    await new Promise(resolve => setTimeout(resolve, 2500));
+            if (isLocked) {
+                // RESEARCH MODE: Open Dossier
+                if (nameHere) openTruthDossier(nameHere);
+            } else {
+                // EDIT MODE: Tap to Swap
+                if (heldTheory) {
+                    // We are holding something. Drop it here.
+                    const droppingTheory = heldTheory;
                     
-                    // Re-fetch from Airtable to get the fresh data
-                    await fetchTheories(); 
-                } catch (err) {
-                    console.error("Webhook trigger failed", err);
+                    // If there was something here already, pick it up instead
+                    if (nameHere && nameHere !== droppingTheory) {
+                        heldTheory = nameHere;
+                        updateHoldingBanner();
+                    } else {
+                        cancelHold(); // Successfully placed, hand is empty
+                    }
+
+                    // Default new drops to 'prove'
+                    if (!userBets[droppingTheory] || userBets[droppingTheory] === 'ghost') userBets[droppingTheory] = 'prove';
+                    updateSlotUI(slot, droppingTheory);
+                    saveState();
+                    renderSidebar();
+                } else {
+                    // Hand is empty. Pick this up.
+                    if (nameHere) {
+                        heldTheory = nameHere;
+                        completelyClearSlotDOM(slot);
+                        updateHoldingBanner();
+                        saveState();
+                        renderSidebar();
+                    }
                 }
             }
-
-            // 3. Display the final data (either cached-as-good, or freshly pulled)
-            const freshData = theoryDataStore[theoryName]; // Re-grab from updated store
-            const lore = freshData.description || "DECRYPTED LORE: Monitors active. Waiting for confirmed data leak.";
-            const intel = freshData.latestIntel || "Monitoring secure frequencies. Running pattern analysis on recent data streams. Standby.";
-            
-            contentBox.innerHTML = `
-                <h3 style="color:var(--accent); border-bottom:1px solid #333; padding-bottom:5px;">${theoryName}</h3>
-                <p style="font-size:0.8rem; line-height:1.4;">${lore}</p>
-                <div class="dossier-news">
-                    <p style="color:#ffd700; margin:0 0 5px 0;"><strong>LATEST INTEL (Last 24h):</strong></p>
-                    <p style="margin:0;">${intel}</p>
-                </div>
-            `;
         }
 
-        function closeModal() { document.getElementById('dossier-modal').style.display = 'none'; }
-
-        // Drag, Drop, and Swapping
-        function handleDragStart(e) {
-            if (isLocked || !this.dataset.theoryName || this.classList.contains('free-space')) { e.preventDefault(); return; }
-            e.dataTransfer.setData("application/json", JSON.stringify({ source: 'board', name: this.dataset.theoryName, originIndex: this.dataset.index }));
-        }
-
-        function handleDrop(e) {
-            e.preventDefault();
-            this.classList.remove('drag-over');
-            if (isLocked || this.classList.contains('free-space')) return;
-
-            const data = JSON.parse(e.dataTransfer.getData("application/json"));
-            
-            if (data.source === 'board') {
-                const originSlot = document.querySelector(`.slot[data-index='${data.originIndex}']`);
-                const existingNameHere = this.dataset.theoryName;
-                if (existingNameHere) updateSlotUI(originSlot, existingNameHere); 
-                else completelyClearSlotDOM(originSlot); 
+        function updateHoldingBanner() {
+            const banner = document.getElementById('holding-banner');
+            if (heldTheory && !isLocked) {
+                document.getElementById('holding-text').innerText = heldTheory;
+                banner.style.display = 'flex';
+            } else {
+                banner.style.display = 'none';
             }
-            
-            // Ensure bet resets to Prove if dropped from vault or if it was a ghost
-            if (!userBets[data.name] || userBets[data.name] === 'ghost') userBets[data.name] = 'prove';
-            updateSlotUI(this, data.name);
-            
-            saveState();
+        }
+
+        function cancelHold() {
+            heldTheory = null;
+            updateHoldingBanner();
             renderSidebar();
         }
 
-        function completelyClearSlotDOM(slot) { slot.className = 'slot'; slot.innerHTML = ''; delete slot.dataset.theoryName; }
-
-        function clearEntireBoard() {
-            if(confirm("Erase all evidence and start a new board?")) {
-                document.querySelectorAll('.slot').forEach(slot => {
-                    if(!slot.classList.contains('free-space')) completelyClearSlotDOM(slot);
-                });
-                saveState();
-                renderSidebar();
+        // Cancels hold if you click the background in edit mode
+        function handleMainClick(e) {
+            if (!isLocked && heldTheory && e.target.id === 'main-content') {
+                cancelHold();
             }
+        }
+
+        function completelyClearSlotDOM(slot) { 
+            slot.className = 'slot'; 
+            slot.innerHTML = '<div class="intel-badge"></div>'; 
+            delete slot.dataset.theoryName; 
         }
 
         function updateSlotUI(slot, theoryName) {
             const bet = userBets[theoryName] || 'prove';
             slot.dataset.theoryName = theoryName;
+            
+            // Rebuild slot safely
+            let badgeHTML = '<div class="intel-badge"></div>';
+            
             if (bet === 'ghost') slot.className = `slot ghost`;
             else slot.className = `slot filled bet-${bet}`;
-            slot.innerHTML = `<div class="slot-content">${theoryName}</div>`;
+            
+            slot.innerHTML = `${badgeHTML}<div class="slot-content">${theoryName}</div>`;
+            checkIntelBadge(slot, theoryName);
         }
 
-        // 4. Tools & State
+        function checkIntelBadge(slot, theoryName) {
+            const data = theoryDataStore[theoryName];
+            if(!data || !data.updatedTime) return;
+            
+            // If updated within last 24 hours, show badge
+            const lastUpdated = new Date(data.updatedTime);
+            const hours = (new Date() - lastUpdated) / (1000 * 60 * 60);
+            if(hours < 24) slot.classList.add('has-intel');
+            else slot.classList.remove('has-intel');
+        }
+
+        function hydrateGridUI() {
+            document.querySelectorAll('.slot[data-theory-name]').forEach(slot => {
+                if(!slot.classList.contains('free-space')) {
+                    checkIntelBadge(slot, slot.dataset.theoryName);
+                }
+            });
+        }
+
+        // 4. The Interactive Truth Dossier
+        async function openTruthDossier(theoryName) {
+            activeDossierTheory = theoryName; // Remember what we are looking at
+            const theoryData = theoryDataStore[theoryName];
+            const modal = document.getElementById('dossier-modal');
+            const contentBox = document.getElementById('dossier-content');
+            const actionBox = document.getElementById('dossier-actions-container');
+            
+            actionBox.style.display = 'none'; // Hide buttons while loading
+            modal.style.display = 'flex';
+            contentBox.innerHTML = `
+                <h3 style="color:var(--accent);">${theoryName}</h3>
+                <p>Establishing secure network...</p>
+                <div class="dossier-news" style="color:#888;">Decrypting live signals...</div>
+            `;
+
+            const lastUpdated = new Date(theoryData?.updatedTime || 0);
+            const hoursSinceUpdate = (new Date() - lastUpdated) / (1000 * 60 * 60);
+
+            if (hoursSinceUpdate > 24 && theoryName !== "THEY ARE HERE") {
+                contentBox.innerHTML = `
+                    <h3 style="color:var(--accent);">${theoryName}</h3>
+                    <p style="color:#ffd700;">Intel outdated. Running live web scrape...</p>
+                    <div class="dossier-news">Searching secure channels...</div>
+                `;
+
+                try {
+                    // SUPER CLEAN SEARCH FOR GNEWS
+                    let rawClean = theoryName.split(':')[0].replace(/['"]/g, '').trim();
+                    let words = rawClean.split(' ');
+                    const cleanSearchQuery = words.slice(0, 4).join(' ');
+
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        mode: 'no-cors', 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ recordId: theoryData.id, theoryName: cleanSearchQuery })
+                    });
+
+                    await new Promise(resolve => setTimeout(resolve, 3500));
+                    await fetchTheories(); 
+                } catch (err) { console.error("Webhook trigger failed", err); }
+            }
+
+            // Display Final Data & Betting Buttons
+            const freshData = theoryDataStore[theoryName]; 
+            const lore = freshData?.description || "DECRYPTED LORE: Monitors active. Waiting for confirmed data leak.";
+            const intel = freshData?.latestIntel || "No recent anomalous chatter detected. Standby.";
+            
+            contentBox.innerHTML = `
+                <h3 style="color:var(--accent); border-bottom:1px solid #333; padding-bottom:5px;">${theoryName}</h3>
+                <p style="font-size:0.85rem; line-height:1.5;">${lore}</p>
+                <div class="dossier-news">
+                    <p style="color:#ffd700; margin:0 0 5px 0; text-transform:uppercase;"><strong>Latest Intel (24h)</strong></p>
+                    <p style="margin:0;">${intel}</p>
+                </div>
+                <p style="font-size:0.7rem; color:#666; margin-top:15px; text-align:center;">Select your stance below to update your board.</p>
+            `;
+            
+            if(theoryName !== "THEY ARE HERE") actionBox.style.display = 'flex';
+        }
+
+        // Submitting a bet from inside the Dossier
+        function submitBet(betState) {
+            if(!activeDossierTheory) return;
+            userBets[activeDossierTheory] = betState;
+            
+            // Find it on the board and update it
+            const slot = Array.from(document.querySelectorAll('.slot')).find(s => s.dataset.theoryName === activeDossierTheory);
+            if (slot) updateSlotUI(slot, activeDossierTheory);
+            
+            saveState();
+            renderSidebar();
+            closeModal();
+        }
+
+        function closeModal() { 
+            document.getElementById('dossier-modal').style.display = 'none'; 
+            activeDossierTheory = null;
+        }
+
+        // 5. Tools, State & UI Toggles
+        function toggleLock() {
+            isLocked = !isLocked;
+            cancelHold(); // Drop anything held
+            const btn = document.getElementById('lock-btn');
+            const board = document.getElementById('bingo-grid');
+            const ind = document.getElementById('mode-indicator');
+            
+            if (isLocked) { 
+                btn.innerText = "🔒 RESEARCH MODE"; 
+                btn.classList.add('locked'); 
+                board.classList.add('locked'); 
+                ind.innerText = "STATUS: LOCKED. Tap tiles to open Truth Dossier.";
+                ind.style.color = "#888";
+            } else { 
+                btn.innerText = "🔓 EDIT MODE"; 
+                btn.classList.remove('locked'); 
+                board.classList.remove('locked'); 
+                ind.innerText = "STATUS: EDITING. Tap vault, then tap grid.";
+                ind.style.color = "var(--accent)";
+            }
+        }
+
+        function toggleMobileVault() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+
         function randomizeBoard() {
             if (isLocked) return;
+            cancelHold();
             let available = allTheories.filter(t => t.fields.Status !== 'Verified').map(t => t.fields.Name);
             available.sort(() => Math.random() - 0.5); 
             const slots = document.querySelectorAll('.slot');
@@ -455,12 +547,16 @@
             renderSidebar();
         }
 
-        function toggleLock() {
-            isLocked = !isLocked;
-            const btn = document.getElementById('lock-btn');
-            const board = document.getElementById('bingo-grid');
-            if (isLocked) { btn.innerText = "🔒 Locked"; btn.classList.add('locked'); board.classList.add('locked'); }
-            else { btn.innerText = "🔓 Unlocked"; btn.classList.remove('locked'); board.classList.remove('locked'); }
+        function clearEntireBoard() {
+            if(isLocked) return;
+            cancelHold();
+            if(confirm("Erase all evidence and start a new board?")) {
+                document.querySelectorAll('.slot').forEach(slot => {
+                    if(!slot.classList.contains('free-space')) completelyClearSlotDOM(slot);
+                });
+                saveState();
+                renderSidebar();
+            }
         }
 
         function shareBoard() {
@@ -485,6 +581,7 @@
         }
 
         function hydrateState(email) {
+            cancelHold();
             const fullKey = `state_${email}_${activeBoardId}`;
             const saved = localStorage.getItem(fullKey);
             if (!saved) {
