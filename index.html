@@ -195,7 +195,7 @@
             }
         }
 
-        // --- THE OMNI-MODAL LOGIC ---
+// --- THE OMNI-MODAL LOGIC ---
         async function openOmniModal(index, theoryName) {
             activeDossierIndex = index;
             activeDossierTheory = theoryName;
@@ -220,18 +220,32 @@
             if (hoursSinceUpdate > 24 && theoryName !== "THEY ARE HERE" && theoryData.id) {
                 contentBox.innerHTML += `<div class="dossier-news">Running secure channel scrape for fresh intel...</div>`;
                 try {
+                    // Clean search query
                     let rawClean = theoryName.split(':')[0].replace(/['"]/g, '').trim();
                     let words = rawClean.split(' ');
                     const cleanSearchQuery = words.slice(0, 4).join(' ');
 
-                    await fetch(WEBHOOK_RESEARCH_URL, {
-                        method: 'POST', mode: 'no-cors', 
+                    console.log(`[DEBUG] Ping Make.com for: "${cleanSearchQuery}" | Record ID: ${theoryData.id}`);
+
+                    // REMOVED 'no-cors' so Make.com can read the JSON properly
+                    const response = await fetch(WEBHOOK_RESEARCH_URL, {
+                        method: 'POST', 
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ recordId: theoryData.id, theoryName: cleanSearchQuery })
                     });
+
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        console.error(`[DEBUG] Make.com 400 Error details:`, errText);
+                    } else {
+                        console.log(`[DEBUG] Make.com ping successful! Waiting for Airtable update...`);
+                    }
+
                     await new Promise(resolve => setTimeout(resolve, 3500));
                     await fetchTheories(); // Refresh dictionary
-                } catch (err) { console.error("Webhook trigger failed", err); }
+                } catch (err) { 
+                    console.error("[DEBUG] Webhook network failure:", err); 
+                }
             }
 
             renderModalContent(theoryName);
@@ -284,12 +298,15 @@
                     .sort(() => Math.random() - 0.5) // Randomize trending for MVP
                     .slice(0, 4);
 
+                // Helper to safely escape theory names for HTML inline onclick attributes
+                const escapeName = (name) => name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
                 if (variations.length > 0) {
                     html += `
                         <div class="modal-section">
                             <div class="section-title">Hot Variations (Swap)</div>
                             <div class="swap-list">
-                                ${variations.map(v => `<div class="swap-pill" onclick="executeSwap('${v.fields.Name.replace(/'/g, "\\'")}')"><span class="swap-icon">↹</span> ${v.fields.Name}</div>`).join('')}
+                                ${variations.map(v => `<div class="swap-pill" onclick="executeSwap('${escapeName(v.fields.Name)}')"><span class="swap-icon">↹</span> ${v.fields.Name}</div>`).join('')}
                             </div>
                         </div>
                     `;
@@ -300,7 +317,7 @@
                         <div class="modal-section">
                             <div class="section-title">Trending in the Vault (Swap)</div>
                             <div class="swap-list">
-                                ${vault.map(v => `<div class="swap-pill" onclick="executeSwap('${v.fields.Name.replace(/'/g, "\\'")}')"><span class="swap-icon">↹</span> ${v.fields.Name}</div>`).join('')}
+                                ${vault.map(v => `<div class="swap-pill" onclick="executeSwap('${escapeName(v.fields.Name)}')"><span class="swap-icon">↹</span> ${v.fields.Name}</div>`).join('')}
                             </div>
                         </div>
                     `;
@@ -320,7 +337,6 @@
 
             document.getElementById('dossier-content').innerHTML = html;
         }
-
         // --- OMNI-MODAL ACTIONS ---
         function submitBet(betState) {
             if(!activeDossierTheory) return;
