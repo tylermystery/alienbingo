@@ -68,6 +68,15 @@
         .btn-hoax:hover { background: rgba(255, 42, 42, 0.2); }
         .btn-ghost:hover { background: rgba(255, 255, 255, 0.1); }
 
+        /* Global Consensus Bar */
+        .consensus-container { margin-top: 15px; padding: 12px; background: #080808; border-radius: 6px; border: 1px solid #333; }
+        .consensus-title { font-size: 0.65rem; color: #aaa; text-transform: uppercase; margin-bottom: 5px; text-align: center; letter-spacing: 1px;}
+        .consensus-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; }
+        .c-prove { background: var(--accent); transition: width 1s ease; }
+        .c-hoax { background: var(--debunked); transition: width 1s ease; }
+        .c-ghost { background: #555; transition: width 1s ease; }
+        .consensus-stats { display: flex; justify-content: space-between; font-size: 0.65rem; margin-top: 5px; font-weight: bold;}
+
         /* Swap Pills */
         .swap-list { display: flex; flex-wrap: wrap; gap: 6px; }
         .swap-pill { background: #000; border: 1px solid #444; color: #ccc; padding: 6px 10px; border-radius: 20px; font-size: 0.7rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
@@ -122,8 +131,6 @@
     <script>
         // Configuration
         const CONFIG = { pat: "paty7GMTxGvGOn5mw.4cdc10ef2078c4975e3abf7f4ec245f0515b79136ea7a3f218a7e059b97c4121", baseId: "app7HPN2vsVVOUYaR", tableName: "MasterList" };
-        const WEBHOOK_RESEARCH_URL = "https://hook.us2.make.com/g56t7hep1fchr4bkpg9s29su9hzhgu40";
-        const WEBHOOK_ADD_URL = "YOUR_MAKE_COM_ADD_WEBHOOK_URL_HERE"; // Placeholder for Phase 2
 
         let userEmail = null;
         let activeBoardId = 'alpha';
@@ -155,7 +162,7 @@
             grid.appendChild(slot);
         }
 
-        // 2. Fetch from Airtable (Now grabbing 'Category')
+        // 2. Fetch from Airtable (Runs once on load)
         async function fetchTheories() {
             try {
                 const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, { headers: { Authorization: `Bearer ${CONFIG.pat}` } });
@@ -169,7 +176,7 @@
                         description: r.fields.Description,
                         latestIntel: r.fields.Latest_Intel,
                         updatedTime: r.fields.Last_Updated,
-                        category: r.fields.Category || "Unclassified" // Added Category
+                        category: r.fields.Category || "Unclassified" 
                     };
                 });
 
@@ -189,66 +196,20 @@
             if (nameHere) {
                 openOmniModal(index, nameHere);
             } else {
-                // If the slot is somehow empty, open modal with random vault theory to start
                 const available = getVaultTheories();
                 if(available.length > 0) openOmniModal(index, available[0]);
             }
         }
 
-// --- THE OMNI-MODAL LOGIC ---
-        async function openOmniModal(index, theoryName) {
+        // --- THE ZERO-LATENCY OMNI-MODAL LOGIC ---
+        function openOmniModal(index, theoryName) {
             activeDossierIndex = index;
             activeDossierTheory = theoryName;
             
-            const theoryData = theoryDataStore[theoryName] || {};
             const modal = document.getElementById('dossier-modal');
-            const contentBox = document.getElementById('dossier-content');
-            
             modal.style.display = 'flex';
             
-            // Render Skeleton / Loading state
-            contentBox.innerHTML = `
-                <h2 style="color:var(--accent); margin:0 0 5px 0;">${theoryName}</h2>
-                <span style="background:#222; padding:3px 8px; border-radius:12px; font-size:0.65rem; color:#888;">${theoryData.category || 'Unclassified'}</span>
-                <p style="color:#888; font-style:italic;">Establishing secure connection...</p>
-            `;
-
-            // Check if stale (JIT Research)
-            const lastUpdated = new Date(theoryData.updatedTime || 0);
-            const hoursSinceUpdate = (new Date() - lastUpdated) / (1000 * 60 * 60);
-
-            if (hoursSinceUpdate > 24 && theoryName !== "THEY ARE HERE" && theoryData.id) {
-                contentBox.innerHTML += `<div class="dossier-news">Running secure channel scrape for fresh intel...</div>`;
-                try {
-                    // Clean search query
-                    let rawClean = theoryName.split(':')[0].replace(/['"]/g, '').trim();
-                    let words = rawClean.split(' ');
-                    const cleanSearchQuery = words.slice(0, 4).join(' ');
-
-                    console.log(`[DEBUG] Ping Make.com for: "${cleanSearchQuery}" | Record ID: ${theoryData.id}`);
-
-                    // REMOVED 'no-cors' so Make.com can read the JSON properly
-                    const response = await fetch(WEBHOOK_RESEARCH_URL, {
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ recordId: theoryData.id, theoryName: cleanSearchQuery })
-                    });
-
-                    if (!response.ok) {
-                        const errText = await response.text();
-                        console.error(`[DEBUG] Make.com 400 Error details:`, errText);
-                    } else {
-                        console.log(`[DEBUG] Make.com ping successful! Waiting for Airtable update...`);
-                    }
-
-                    await new Promise(resolve => setTimeout(resolve, 3500));
-                    await fetchTheories(); // Refresh dictionary
-                } catch (err) { 
-                    console.error("[DEBUG] Webhook network failure:", err); 
-                }
-            }
-
-            renderModalContent(theoryName);
+            renderModalContent(theoryName); // Loads instantly, no waiting!
         }
 
         function renderModalContent(theoryName) {
@@ -257,6 +218,7 @@
             const intel = data.latestIntel || "No anomalous chatter detected. Standby.";
             const cat = data.category || "Unclassified";
             const isFreeSpace = (theoryName === "THEY ARE HERE");
+            const currentBet = userBets[theoryName];
             
             let html = `
                 <h2 style="color:var(--accent); margin:0 0 5px 0;">${theoryName}</h2>
@@ -271,15 +233,42 @@
                 </div>
             `;
 
-            // ZONE 1: Bets
+            // ZONE 1: Bets & Consensus
             if (!isFreeSpace) {
-                html += `
-                    <div class="dossier-actions">
-                        <button class="btn-prove" onclick="submitBet('prove')">🟩 PROVE</button>
-                        <button class="btn-hoax" onclick="submitBet('debunk')">🟥 HOAX</button>
-                        <button class="btn-ghost" onclick="submitBet('ghost')">⬛ GHOST</button>
-                    </div>
-                `;
+                if (currentBet) {
+                    // Generate pseudo-random consensus based on string length to keep it consistent per theory
+                    const seed = theoryName.length;
+                    const p = Math.max(10, (seed * 7) % 80); 
+                    const h = Math.max(10, (seed * 11) % (100 - p));
+                    const g = 100 - p - h;
+
+                    html += `
+                        <div class="consensus-container">
+                            <div class="consensus-title">Global Network Consensus</div>
+                            <div class="consensus-bar">
+                                <div class="c-prove" style="width: ${p}%;"></div>
+                                <div class="c-hoax" style="width: ${h}%;"></div>
+                                <div class="c-ghost" style="width: ${g}%;"></div>
+                            </div>
+                            <div class="consensus-stats">
+                                <span style="color:var(--accent)">PROVE: ${p}%</span>
+                                <span style="color:var(--debunked)">HOAX: ${h}%</span>
+                                <span style="color:#888">GHOST: ${g}%</span>
+                            </div>
+                        </div>
+                        <div style="text-align:center; margin-top:10px;">
+                            <button class="btn" style="border-color:#555; color:#aaa;" onclick="resetBet()">↺ Change Stance</button>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="dossier-actions">
+                            <button class="btn-prove" onclick="submitBet('prove')">🟩 PROVE</button>
+                            <button class="btn-hoax" onclick="submitBet('debunk')">🟥 HOAX</button>
+                            <button class="btn-ghost" onclick="submitBet('ghost')">⬛ GHOST</button>
+                        </div>
+                    `;
+                }
             }
 
             // ZONE 2 & 3: Swapping
@@ -295,10 +284,9 @@
                 const varNames = variations.map(v => v.fields.Name);
                 const vault = allTheories
                     .filter(t => !onBoard.includes(t.fields.Name) && !varNames.includes(t.fields.Name) && t.fields.Name !== theoryName)
-                    .sort(() => Math.random() - 0.5) // Randomize trending for MVP
+                    .sort(() => Math.random() - 0.5) 
                     .slice(0, 4);
 
-                // Helper to safely escape theory names for HTML inline onclick attributes
                 const escapeName = (name) => name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
                 if (variations.length > 0) {
@@ -337,6 +325,7 @@
 
             document.getElementById('dossier-content').innerHTML = html;
         }
+
         // --- OMNI-MODAL ACTIONS ---
         function submitBet(betState) {
             if(!activeDossierTheory) return;
@@ -344,18 +333,24 @@
             const slot = document.querySelector(`.slot[data-index='${activeDossierIndex}']`);
             if (slot) updateSlotUI(slot, activeDossierTheory);
             saveState();
-            closeModal();
+            renderModalContent(activeDossierTheory); // Re-render to show Consensus!
+        }
+
+        function resetBet() {
+            if(!activeDossierTheory) return;
+            delete userBets[activeDossierTheory];
+            const slot = document.querySelector(`.slot[data-index='${activeDossierIndex}']`);
+            if (slot) updateSlotUI(slot, activeDossierTheory); // Will fall back to default styling
+            saveState();
+            renderModalContent(activeDossierTheory); // Re-render to show Buttons
         }
 
         function executeSwap(newTheoryName) {
-            // Update the slot data directly
             const slot = document.querySelector(`.slot[data-index='${activeDossierIndex}']`);
-            if (!userBets[newTheoryName]) userBets[newTheoryName] = 'prove'; // Default bet
+            if (!userBets[newTheoryName]) userBets[newTheoryName] = 'prove'; 
             
             updateSlotUI(slot, newTheoryName);
             saveState();
-            
-            // Re-open modal to show the newly swapped theory's deep dive
             openOmniModal(activeDossierIndex, newTheoryName);
         }
 
@@ -364,11 +359,11 @@
             const newTheory = input.value.trim();
             if (!newTheory) return;
 
-            // Optimistic UI Update for MVP (Fakes adding it to the database instantly)
+            // Instantly create local data for the MVP
             const fakeData = {
                 id: 'temp_' + Date.now(),
                 status: 'Unverified',
-                description: 'User-submitted intel. Pending verification.',
+                description: 'User-submitted intel. Awaiting AI synopsis and verification.',
                 latestIntel: 'Monitoring secure channels...',
                 category: 'User Custom'
             };
@@ -376,15 +371,6 @@
             theoryDataStore[newTheory] = fakeData;
             allTheories.push({ fields: { Name: newTheory, Category: 'User Custom' } });
             
-            // Fire Webhook in background to actually add to Airtable (Phase 2 placeholder)
-            if (WEBHOOK_ADD_URL !== "YOUR_MAKE_COM_ADD_WEBHOOK_URL_HERE") {
-                fetch(WEBHOOK_ADD_URL, {
-                    method: 'POST', mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ theoryName: newTheory, user: userEmail || 'anon' })
-                }).catch(e => console.log("Add webhook error:", e));
-            }
-
             executeSwap(newTheory);
         }
 
@@ -401,11 +387,13 @@
         }
 
         function updateSlotUI(slot, theoryName) {
-            const bet = userBets[theoryName] || 'prove';
+            const bet = userBets[theoryName]; // Notice: No longer defaults to 'prove' to force user choice
             slot.dataset.theoryName = theoryName;
             
             let badgeHTML = '<div class="intel-badge"></div>';
-            if (bet === 'ghost') slot.className = `slot ghost`;
+            
+            if (!bet) slot.className = `slot filled`; // Neutral state before betting
+            else if (bet === 'ghost') slot.className = `slot ghost`;
             else slot.className = `slot filled bet-${bet}`;
             
             slot.innerHTML = `${badgeHTML}<div class="slot-content">${theoryName}</div>`;
@@ -438,7 +426,6 @@
                 if (i === 12) return;
                 if (aIdx < available.length) {
                     const tName = available[aIdx++];
-                    if (!userBets[tName] || userBets[tName] === 'ghost') userBets[tName] = 'prove';
                     updateSlotUI(slot, tName);
                 } else {
                     slot.className = 'slot'; 
@@ -462,7 +449,6 @@
             const saved = localStorage.getItem(fullKey);
             
             if (!saved) {
-                // Initial load: clear and let randomize handle it later
                 document.querySelectorAll('.slot').forEach(s => { 
                     if(!s.classList.contains('free-space')) {
                         s.className = 'slot'; 
