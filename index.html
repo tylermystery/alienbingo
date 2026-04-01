@@ -18,13 +18,21 @@
         .btn { background: #111; border: 1px solid var(--accent); color: var(--accent); padding: 6px 12px; cursor: pointer; font-family: inherit; font-weight: bold; transition: 0.2s; font-size: 0.75rem; border-radius: 4px; }
         .btn:hover { background: rgba(57, 255, 20, 0.2); }
 
+        /* App Mode Toggle Button */
+        #mode-toggle { background: rgba(57, 255, 20, 0.1); font-size: 0.8rem; padding: 6px 15px; }
+        #mode-toggle.mode-rearrange { background: rgba(255, 215, 0, 0.2); border-color: var(--verified); color: var(--verified); }
+
         /* Main Edge-to-Edge Layout */
         #app-body { display: flex; flex-grow: 1; justify-content: center; align-items: center; background: radial-gradient(circle, #111 0%, #050505 100%); padding: 10px; overflow-y: auto; position: relative; }
         
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 800px; aspect-ratio: 1 / 1; padding: 10px; background: rgba(57, 255, 20, 0.03); border-radius: 10px; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 800px; aspect-ratio: 1 / 1; padding: 10px; background: rgba(57, 255, 20, 0.03); border-radius: 10px; transition: 0.3s;}
+        .grid.is-rearranging { border: 1px solid var(--verified); box-shadow: inset 0 0 20px rgba(255,215,0,0.1); }
         
         .slot { background: var(--panel); border: 1px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8px; font-size: 0.7rem; transition: 0.2s; position: relative; cursor: pointer; user-select: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);}
         .slot:hover { border-color: #666; transform: scale(0.98); }
+        
+        /* Rearrange States */
+        .slot.swap-selected { border-color: var(--verified); background: rgba(255, 215, 0, 0.15); transform: scale(0.95); z-index: 10; }
         
         /* Slot States */
         .slot-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%; word-break: break-word; pointer-events: none; }
@@ -77,11 +85,15 @@
         .c-ghost { background: #555; transition: width 1s ease; }
         .consensus-stats { display: flex; justify-content: space-between; font-size: 0.65rem; margin-top: 5px; font-weight: bold;}
 
-        /* Swap Pills */
+        /* Swap Pills & Rabbit Hole Links */
         .swap-list { display: flex; flex-wrap: wrap; gap: 6px; }
-        .swap-pill { background: #000; border: 1px solid #444; color: #ccc; padding: 6px 10px; border-radius: 20px; font-size: 0.7rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
+        .swap-pill { background: #000; border: 1px solid #444; color: #ccc; padding: 6px 10px; border-radius: 20px; font-size: 0.7rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; text-decoration: none;}
         .swap-pill:hover { border-color: var(--accent); color: var(--accent); background: rgba(57,255,20,0.05); }
         .swap-icon { font-size: 0.8rem; }
+        
+        .portal-reddit:hover { border-color: #ff4500; color: #ff4500; background: rgba(255,69,0,0.1); }
+        .portal-youtube:hover { border-color: #ff0000; color: #ff0000; background: rgba(255,0,0,0.1); }
+        .portal-web:hover { border-color: #4285f4; color: #4285f4; background: rgba(66,133,244,0.1); }
 
         /* Whistleblower Input */
         .whistleblower-box { display: flex; gap: 8px; margin-top: 5px; }
@@ -113,11 +125,13 @@
     <header id="toolbar">
         <div class="branding">AlienBingo</div>
         <div class="toolbar-controls">
+            <button id="mode-toggle" class="btn" onclick="toggleAppMode()">🔍 RESEARCH MODE</button>
+            
             <select id="board-profile" class="board-select" onchange="switchBoard()">
                 <option value="alpha">Alpha Board</option>
                 <option value="beta">Beta Board</option>
             </select>
-            <button class="btn" onclick="randomizeBoard()">🎲 Shuffle Board</button>
+            <button class="btn" onclick="randomizeBoard()">🎲 Shuffle</button>
             <button class="btn" onclick="shareBoard()">📤 Share</button>
             <div id="g_id_onload" data-client_id="207125775312-s0hh1a7ojoh6jmu920oic88fn70bo24e.apps.googleusercontent.com" data-callback="handleSignIn" data-auto_prompt="false"></div>
             <div class="g_id_signin" data-type="standard" data-size="small"></div>
@@ -141,6 +155,10 @@
         let activeDossierIndex = null;
         let activeDossierTheory = null;
 
+        // App Mode State ('research' or 'swap')
+        let appMode = 'research'; 
+        let selectedSwapIndex = null;
+
         // 1. Init Grid
         const grid = document.getElementById('bingo-grid');
         for (let i = 0; i < 25; i++) {
@@ -152,7 +170,7 @@
                 slot.innerHTML = `<div class="slot-content">THEY ARE HERE</div>`;
                 slot.classList.add('free-space', 'filled', 'bet-prove');
                 slot.dataset.theoryName = "THEY ARE HERE";
-                slot.onclick = () => openOmniModal(i, "THEY ARE HERE");
+                slot.onclick = () => handleSlotClick(i);
             } else {
                 slot.onclick = () => handleSlotClick(i); 
                 const dot = document.createElement('div');
@@ -162,7 +180,7 @@
             grid.appendChild(slot);
         }
 
-        // 2. Fetch from Airtable (Runs once on load)
+        // 2. Fetch from Airtable
         async function fetchTheories() {
             try {
                 const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, { headers: { Authorization: `Bearer ${CONFIG.pat}` } });
@@ -189,16 +207,80 @@
             return Array.from(document.querySelectorAll('.slot[data-theory-name]')).map(s => s.dataset.theoryName).filter(n => n && n !== "THEY ARE HERE");
         }
 
+        // --- NEW: MODE TOGGLE & SLOT CLICK LOGIC ---
+        function toggleAppMode() {
+            const btn = document.getElementById('mode-toggle');
+            const gridEl = document.getElementById('bingo-grid');
+            
+            if (appMode === 'research') {
+                appMode = 'swap';
+                btn.innerText = "✋ REARRANGE MODE";
+                btn.classList.add('mode-rearrange');
+                gridEl.classList.add('is-rearranging');
+            } else {
+                appMode = 'research';
+                btn.innerText = "🔍 RESEARCH MODE";
+                btn.classList.remove('mode-rearrange');
+                gridEl.classList.remove('is-rearranging');
+                clearSwapSelection(); // abort any pending swap
+            }
+        }
+
         function handleSlotClick(index) {
             const slot = document.querySelector(`.slot[data-index='${index}']`);
             const nameHere = slot.dataset.theoryName;
-            
-            if (nameHere) {
-                openOmniModal(index, nameHere);
-            } else {
-                const available = getVaultTheories();
-                if(available.length > 0) openOmniModal(index, available[0]);
+
+            if (appMode === 'research') {
+                // Default Behavior: Open Dossier
+                if (nameHere) {
+                    openOmniModal(index, nameHere);
+                } else {
+                    const available = getVaultTheories();
+                    if(available.length > 0) openOmniModal(index, available[0]);
+                }
+            } else if (appMode === 'swap') {
+                // Rearrange Behavior: Select and Swap
+                if (index === 12) return; // Cannot move the free space
+
+                if (selectedSwapIndex === null) {
+                    // Select first tile
+                    selectedSwapIndex = index;
+                    slot.classList.add('swap-selected');
+                } else {
+                    // We have a second tile, execute swap!
+                    if (selectedSwapIndex !== index) {
+                        const slot1 = document.querySelector(`.slot[data-index='${selectedSwapIndex}']`);
+                        const slot2 = slot;
+                        
+                        const name1 = slot1.dataset.theoryName;
+                        const name2 = slot2.dataset.theoryName;
+
+                        // Swap visually and in data
+                        if (name2) updateSlotUI(slot1, name2);
+                        else clearSlotDOM(slot1);
+
+                        if (name1) updateSlotUI(slot2, name1);
+                        else clearSlotDOM(slot2);
+
+                        saveState();
+                    }
+                    clearSwapSelection();
+                }
             }
+        }
+
+        function clearSwapSelection() {
+            if (selectedSwapIndex !== null) {
+                const slot = document.querySelector(`.slot[data-index='${selectedSwapIndex}']`);
+                if(slot) slot.classList.remove('swap-selected');
+                selectedSwapIndex = null;
+            }
+        }
+
+        function clearSlotDOM(slot) {
+            slot.className = 'slot'; 
+            slot.innerHTML = '<div class="intel-badge"></div>'; 
+            delete slot.dataset.theoryName;
         }
 
         // --- THE ZERO-LATENCY OMNI-MODAL LOGIC ---
@@ -209,7 +291,7 @@
             const modal = document.getElementById('dossier-modal');
             modal.style.display = 'flex';
             
-            renderModalContent(theoryName); // Loads instantly, no waiting!
+            renderModalContent(theoryName); 
         }
 
         function renderModalContent(theoryName) {
@@ -236,7 +318,6 @@
             // ZONE 1: Bets & Consensus
             if (!isFreeSpace) {
                 if (currentBet) {
-                    // Generate pseudo-random consensus based on string length to keep it consistent per theory
                     const seed = theoryName.length;
                     const p = Math.max(10, (seed * 7) % 80); 
                     const h = Math.max(10, (seed * 11) % (100 - p));
@@ -271,16 +352,27 @@
                 }
             }
 
+            // NEW: RABBIT HOLE PORTALS
+            const query = encodeURIComponent(theoryName + " conspiracy");
+            html += `
+                <div class="modal-section">
+                    <div class="section-title">Enter the Rabbit Hole</div>
+                    <div class="swap-list">
+                        <a href="https://www.reddit.com/search/?q=${query}" target="_blank" class="swap-pill portal-reddit"><span class="swap-icon">👽</span> Reddit</a>
+                        <a href="https://www.youtube.com/results?search_query=${query}" target="_blank" class="swap-pill portal-youtube"><span class="swap-icon">📺</span> YouTube</a>
+                        <a href="https://www.google.com/search?q=${query}" target="_blank" class="swap-pill portal-web"><span class="swap-icon">🌐</span> Web Search</a>
+                    </div>
+                </div>
+            `;
+
             // ZONE 2 & 3: Swapping
             if (!isFreeSpace) {
                 const onBoard = getBoardTheories();
                 
-                // Find Hot Variations (Same Category)
                 const variations = allTheories
                     .filter(t => t.fields.Category === cat && t.fields.Name !== theoryName && !onBoard.includes(t.fields.Name))
                     .slice(0, 3);
                 
-                // Find Vault Trending (Any Category)
                 const varNames = variations.map(v => v.fields.Name);
                 const vault = allTheories
                     .filter(t => !onBoard.includes(t.fields.Name) && !varNames.includes(t.fields.Name) && t.fields.Name !== theoryName)
@@ -333,16 +425,16 @@
             const slot = document.querySelector(`.slot[data-index='${activeDossierIndex}']`);
             if (slot) updateSlotUI(slot, activeDossierTheory);
             saveState();
-            renderModalContent(activeDossierTheory); // Re-render to show Consensus!
+            renderModalContent(activeDossierTheory); 
         }
 
         function resetBet() {
             if(!activeDossierTheory) return;
             delete userBets[activeDossierTheory];
             const slot = document.querySelector(`.slot[data-index='${activeDossierIndex}']`);
-            if (slot) updateSlotUI(slot, activeDossierTheory); // Will fall back to default styling
+            if (slot) updateSlotUI(slot, activeDossierTheory); 
             saveState();
-            renderModalContent(activeDossierTheory); // Re-render to show Buttons
+            renderModalContent(activeDossierTheory); 
         }
 
         function executeSwap(newTheoryName) {
@@ -359,7 +451,6 @@
             const newTheory = input.value.trim();
             if (!newTheory) return;
 
-            // Instantly create local data for the MVP
             const fakeData = {
                 id: 'temp_' + Date.now(),
                 status: 'Unverified',
@@ -387,12 +478,12 @@
         }
 
         function updateSlotUI(slot, theoryName) {
-            const bet = userBets[theoryName]; // Notice: No longer defaults to 'prove' to force user choice
+            const bet = userBets[theoryName]; 
             slot.dataset.theoryName = theoryName;
             
             let badgeHTML = '<div class="intel-badge"></div>';
             
-            if (!bet) slot.className = `slot filled`; // Neutral state before betting
+            if (!bet) slot.className = `slot filled`; 
             else if (bet === 'ghost') slot.className = `slot ghost`;
             else slot.className = `slot filled bet-${bet}`;
             
@@ -428,9 +519,7 @@
                     const tName = available[aIdx++];
                     updateSlotUI(slot, tName);
                 } else {
-                    slot.className = 'slot'; 
-                    slot.innerHTML = '<div class="intel-badge"></div>'; 
-                    delete slot.dataset.theoryName;
+                    clearSlotDOM(slot);
                 }
             });
             saveState();
@@ -450,11 +539,7 @@
             
             if (!saved) {
                 document.querySelectorAll('.slot').forEach(s => { 
-                    if(!s.classList.contains('free-space')) {
-                        s.className = 'slot'; 
-                        s.innerHTML = '<div class="intel-badge"></div>'; 
-                        delete s.dataset.theoryName;
-                    }
+                    if(!s.classList.contains('free-space')) clearSlotDOM(s);
                 });
                 userBets = {}; 
                 return;
@@ -466,11 +551,7 @@
             state.board.forEach((name, i) => {
                 if (i === 12) return;
                 if (name) updateSlotUI(slots[i], name);
-                else {
-                    slots[i].className = 'slot'; 
-                    slots[i].innerHTML = '<div class="intel-badge"></div>'; 
-                    delete slots[i].dataset.theoryName;
-                }
+                else clearSlotDOM(slots[i]);
             });
         }
 
