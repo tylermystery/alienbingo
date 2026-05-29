@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alien Bingo | The Truth Vault</title>
+    <title>Alien Bingo | Disclosure</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         :root { --bg: #050505; --panel: #111; --panel-light: #1a1a1a; --accent: #39ff14; --verified: #ffd700; --debunked: #ff2a2a; --text: #e0e0e0; --border: #333; }
@@ -25,10 +25,11 @@
         /* Main Edge-to-Edge Layout */
         #app-body { display: flex; flex-grow: 1; justify-content: center; align-items: center; background: radial-gradient(circle, #111 0%, #050505 100%); padding: 10px; overflow-y: auto; position: relative; }
         
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 800px; aspect-ratio: 1 / 1; padding: 10px; background: rgba(57, 255, 20, 0.03); border-radius: 10px; transition: 0.3s;}
-        .grid.is-rearranging { border: 1px solid var(--verified); box-shadow: inset 0 0 20px rgba(255,215,0,0.1); }
+        /* 3x3 Grid Upgrade */
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; max-width: 500px; aspect-ratio: 1 / 1; padding: 12px; background: rgba(57, 255, 20, 0.03); border-radius: 12px; transition: 0.3s;}
+        .grid.is-rearranging { border: 1px solid var(--verified); box-shadow: inset 0 0 30px rgba(255,215,0,0.1); }
         
-        .slot { background: var(--panel); border: 1px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8px; font-size: 0.7rem; transition: 0.2s; position: relative; cursor: pointer; user-select: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);}
+        .slot { background: var(--panel); border: 1px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 12px; font-size: 0.9rem; font-weight: bold; transition: 0.2s; position: relative; cursor: pointer; user-select: none; box-shadow: 0 4px 10px rgba(0,0,0,0.4);}
         .slot:hover { border-color: #666; transform: scale(0.98); }
         
         /* Rearrange States */
@@ -38,37 +39,37 @@
         .slot-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%; word-break: break-word; pointer-events: none; }
         .slot.filled { border-style: solid; border-color: #444; }
         
-        .slot.bet-prove { border-color: var(--accent); color: var(--text); box-shadow: inset 0 0 15px rgba(57, 255, 20, 0.1); }
-        .slot.bet-prove::before { content: "PROVE"; position: absolute; top: 3px; left: 3px; font-size: 0.45rem; color: var(--accent); font-weight: bold; }
+        .slot.bet-prove { border-color: var(--accent); color: var(--text); box-shadow: inset 0 0 20px rgba(57, 255, 20, 0.15); }
+        .slot.bet-prove::before { content: "PROVE"; position: absolute; top: 4px; left: 4px; font-size: 0.5rem; color: var(--accent); }
         
-        .slot.bet-debunk { border-color: var(--debunked); color: var(--text); box-shadow: inset 0 0 15px rgba(255, 42, 42, 0.1); }
-        .slot.bet-debunk::before { content: "HOAX"; position: absolute; top: 3px; left: 3px; font-size: 0.45rem; color: var(--debunked); font-weight: bold; }
+        .slot.bet-debunk { border-color: var(--debunked); color: var(--text); box-shadow: inset 0 0 20px rgba(255, 42, 42, 0.15); }
+        .slot.bet-debunk::before { content: "HOAX"; position: absolute; top: 4px; left: 4px; font-size: 0.5rem; color: var(--debunked); }
         
         .slot.ghost { border-style: dotted; border-color: #555; opacity: 0.5; }
-        .slot.ghost::after { content: "GHOST"; position: absolute; font-size: 0.45rem; color: #888; bottom: 3px; left: 3px; }
+        .slot.ghost::after { content: "GHOST"; position: absolute; font-size: 0.5rem; color: #888; bottom: 4px; left: 4px; }
 
-        .free-space { color: var(--accent) !important; border: 1px solid var(--accent) !important; font-weight: bold; cursor: default; }
+        .free-space { color: var(--accent) !important; border: 1px solid var(--accent) !important; font-weight: bold; cursor: default; background: rgba(57,255,20,0.05); }
         .free-space::before { display: none; }
 
-        .intel-badge { position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; background-color: var(--debunked); border-radius: 50%; box-shadow: 0 0 8px var(--debunked); display: none; }
+        .intel-badge { position: absolute; top: -6px; right: -6px; width: 14px; height: 14px; background-color: var(--debunked); border-radius: 50%; box-shadow: 0 0 10px var(--debunked); display: none; }
         .slot.has-intel .intel-badge { display: block; }
 
         /* Omni-Modal (Truth Dossier) */
         #dossier-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
         #dossier-window { background: var(--panel); border: 1px solid var(--accent); width: 100%; max-width: 550px; max-height: 90vh; padding: 25px; border-radius: 8px; box-shadow: 0 0 30px rgba(57, 255, 20, 0.15); position: relative; display: flex; flex-direction: column; }
         
-        #dossier-content { overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.8rem; line-height: 1.4; padding-right: 10px; flex-grow: 1; }
+        #dossier-content { overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.5; padding-right: 10px; flex-grow: 1; }
         #dossier-content::-webkit-scrollbar { width: 4px; }
         #dossier-content::-webkit-scrollbar-thumb { background: var(--accent); }
         
         .modal-section { margin-top: 15px; border-top: 1px solid #222; padding-top: 15px; }
         .section-title { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
         
-        .dossier-news { background: var(--panel-light); padding: 12px; border-left: 3px solid var(--verified); margin-top: 10px; font-size: 0.75rem; color: #ffd700; border-radius: 0 4px 4px 0;}
+        .dossier-news { background: var(--panel-light); padding: 12px; border-left: 3px solid var(--verified); margin-top: 10px; font-size: 0.8rem; color: #ffd700; border-radius: 0 4px 4px 0;}
 
         /* Betting Action Buttons */
         .dossier-actions { display: flex; gap: 8px; margin-top: 15px; }
-        .dossier-actions button { flex: 1; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; font-family: inherit;}
+        .dossier-actions button { flex: 1; padding: 12px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; font-family: inherit; font-size: 0.9rem;}
         .btn-prove { background: #000; border: 1px solid var(--accent); color: var(--accent); }
         .btn-hoax { background: #000; border: 1px solid var(--debunked); color: var(--debunked); }
         .btn-ghost { background: #000; border: 1px dashed #888; color: #888; }
@@ -78,18 +79,18 @@
 
         /* Global Consensus Bar */
         .consensus-container { margin-top: 15px; padding: 12px; background: #080808; border-radius: 6px; border: 1px solid #333; }
-        .consensus-title { font-size: 0.65rem; color: #aaa; text-transform: uppercase; margin-bottom: 5px; text-align: center; letter-spacing: 1px;}
-        .consensus-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; }
+        .consensus-title { font-size: 0.7rem; color: #aaa; text-transform: uppercase; margin-bottom: 5px; text-align: center; letter-spacing: 1px;}
+        .consensus-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; }
         .c-prove { background: var(--accent); transition: width 1s ease; }
         .c-hoax { background: var(--debunked); transition: width 1s ease; }
         .c-ghost { background: #555; transition: width 1s ease; }
-        .consensus-stats { display: flex; justify-content: space-between; font-size: 0.65rem; margin-top: 5px; font-weight: bold;}
+        .consensus-stats { display: flex; justify-content: space-between; font-size: 0.7rem; margin-top: 5px; font-weight: bold;}
 
         /* Swap Pills & Rabbit Hole Links */
         .swap-list { display: flex; flex-wrap: wrap; gap: 6px; }
-        .swap-pill { background: #000; border: 1px solid #444; color: #ccc; padding: 6px 10px; border-radius: 20px; font-size: 0.7rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; text-decoration: none;}
+        .swap-pill { background: #000; border: 1px solid #444; color: #ccc; padding: 8px 12px; border-radius: 20px; font-size: 0.75rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; text-decoration: none;}
         .swap-pill:hover { border-color: var(--accent); color: var(--accent); background: rgba(57,255,20,0.05); }
-        .swap-icon { font-size: 0.8rem; }
+        .swap-icon { font-size: 0.9rem; }
         
         .portal-reddit:hover { border-color: #ff4500; color: #ff4500; background: rgba(255,69,0,0.1); }
         .portal-youtube:hover { border-color: #ff0000; color: #ff0000; background: rgba(255,0,0,0.1); }
@@ -97,18 +98,18 @@
 
         /* Whistleblower Input */
         .whistleblower-box { display: flex; gap: 8px; margin-top: 5px; }
-        .whistleblower-box input { flex-grow: 1; background: #000; border: 1px solid #444; color: var(--text); padding: 8px 12px; border-radius: 4px; font-family: inherit; font-size: 0.75rem; }
+        .whistleblower-box input { flex-grow: 1; background: #000; border: 1px solid #444; color: var(--text); padding: 10px 12px; border-radius: 4px; font-family: inherit; font-size: 0.8rem; }
         .whistleblower-box input:focus { outline: none; border-color: var(--accent); }
 
-        .close-dossier { position: absolute; top: 10px; right: 15px; background: none; border: none; color: #888; font-size: 1.5rem; cursor: pointer; transition: 0.2s; }
+        .close-dossier { position: absolute; top: 10px; right: 15px; background: none; border: none; color: #888; font-size: 1.8rem; cursor: pointer; transition: 0.2s; }
         .close-dossier:hover { color: var(--debunked); }
 
         @media (max-width: 768px) {
-            #toolbar { padding: 10px; flex-wrap: wrap; }
-            .branding { font-size: 1rem; }
-            .grid { padding: 5px; gap: 4px; border-radius: 6px; }
-            .slot { font-size: 0.55rem; padding: 4px; }
-            #dossier-window { width: 95%; max-height: 95vh; padding: 15px; }
+            #toolbar { padding: 10px; flex-wrap: wrap; justify-content: center; gap: 10px;}
+            .branding { font-size: 1rem; width: 100%; text-align: center;}
+            .grid { padding: 8px; gap: 6px; border-radius: 8px; }
+            .slot { font-size: 0.75rem; padding: 8px; }
+            #dossier-window { width: 95%; max-height: 95vh; padding: 20px; }
         }
     </style>
 </head>
@@ -126,11 +127,6 @@
         <div class="branding">AlienBingo</div>
         <div class="toolbar-controls">
             <button id="mode-toggle" class="btn" onclick="toggleAppMode()">🔍 RESEARCH MODE</button>
-            
-            <select id="board-profile" class="board-select" onchange="switchBoard()">
-                <option value="alpha">Alpha Board</option>
-                <option value="beta">Beta Board</option>
-            </select>
             <button class="btn" onclick="randomizeBoard()">🎲 Shuffle</button>
             <button class="btn" onclick="shareBoard()">📤 Share</button>
             <div id="g_id_onload" data-client_id="207125775312-s0hh1a7ojoh6jmu920oic88fn70bo24e.apps.googleusercontent.com" data-callback="handleSignIn" data-auto_prompt="false"></div>
@@ -148,28 +144,39 @@
 
         let userEmail = null;
         let activeBoardId = 'alpha';
-        let allTheories = [];
+        
+        // High-Volatility Pre-Load (Ensures immediate UAP thematic 3x3 out of the box)
+        let allTheories = [
+            { fields: { Name: "Pentagon Crash Retrievals", Category: "UAP", Description: "Defense contractors like Lockheed Martin secretly house recovered non-human craft.", Latest_Intel: "Awaiting Congressional subpoena enforcement." } },
+            { fields: { Name: "Non-Human Biologics", Category: "UAP", Description: "Whistleblowers claim NHI bodies have been recovered from crash sites.", Latest_Intel: "Monitoring incoming legislative amendments." } },
+            { fields: { Name: "Oceanic UAP Bases", Category: "UAP", Description: "Transmedium craft are operating from deep-sea facilities off the coast of California.", Latest_Intel: "Sonar anomalies detected in recent naval exercises." } },
+            { fields: { Name: "The Vatican Secrets", Category: "Gov", Description: "The Pope possesses direct knowledge of the 1933 Magenta UFO crash in Italy.", Latest_Intel: "Archival researchers continue pressing for unredacted access." } },
+            { fields: { Name: "Reverse-Engineered Tech", Category: "Tech", Description: "Modern advancements like fiber optics and microchips were derived from Roswell debris.", Latest_Intel: "Awaiting further whistleblower testimony." } },
+            { fields: { Name: "Project Blue Beam", Category: "Gov", Description: "The government will simulate an alien invasion to force global unification.", Latest_Intel: "Monitoring aerospace holographic tech patents." } },
+            { fields: { Name: "Roswell Was Real", Category: "UAP", Description: "The 1947 weather balloon story was a hastily constructed cover-up.", Latest_Intel: "Final classified files remain sealed." } },
+            { fields: { Name: "Senate Disclosure Act", Category: "Gov", Description: "Upcoming legislation will force private defense contractors to hand over UFOs.", Latest_Intel: "Lobbying efforts to block the bill have intensified." } }
+        ];
+
         let theoryDataStore = {}; 
         let userBets = {}; 
         
         let activeDossierIndex = null;
         let activeDossierTheory = null;
-
-        // App Mode State ('research' or 'swap')
         let appMode = 'research'; 
         let selectedSwapIndex = null;
 
-        // 1. Init Grid
+        // 1. Init 3x3 Grid (9 Slots)
         const grid = document.getElementById('bingo-grid');
-        for (let i = 0; i < 25; i++) {
+        for (let i = 0; i < 9; i++) {
             const slot = document.createElement('div');
             slot.className = 'slot';
             slot.dataset.index = i;
             
-            if (i === 12) {
-                slot.innerHTML = `<div class="slot-content">THEY ARE HERE</div>`;
+            // Center Free Space is now index 4
+            if (i === 4) {
+                slot.innerHTML = `<div class="slot-content">DISCLOSURE IMMINENT</div>`;
                 slot.classList.add('free-space', 'filled', 'bet-prove');
-                slot.dataset.theoryName = "THEY ARE HERE";
+                slot.dataset.theoryName = "DISCLOSURE IMMINENT";
                 slot.onclick = () => handleSlotClick(i);
             } else {
                 slot.onclick = () => handleSlotClick(i); 
@@ -180,34 +187,46 @@
             grid.appendChild(slot);
         }
 
+        // Initialize Store with Defaults
+        allTheories.forEach(r => {
+            theoryDataStore[r.fields.Name] = {
+                status: 'Unverified',
+                description: r.fields.Description,
+                latestIntel: r.fields.Latest_Intel,
+                category: r.fields.Category 
+            };
+        });
+
         // 2. Fetch from Airtable
         async function fetchTheories() {
             try {
                 const response = await fetch(`https://api.airtable.com/v0/${CONFIG.baseId}/${CONFIG.tableName}`, { headers: { Authorization: `Bearer ${CONFIG.pat}` } });
                 const data = await response.json();
-                allTheories = data.records.filter(r => r.fields.Name);
                 
-                allTheories.forEach(r => {
-                    theoryDataStore[r.fields.Name] = {
-                        id: r.id,
-                        status: r.fields.Status,
-                        description: r.fields.Description,
-                        latestIntel: r.fields.Latest_Intel,
-                        updatedTime: r.fields.Last_Updated,
-                        category: r.fields.Category || "Unclassified" 
-                    };
-                });
-
-                if (getBoardTheories().length === 0) randomizeBoard();
-                else hydrateGridUI();
+                // Merge Airtable data with defaults
+                const fetched = data.records.filter(r => r.fields.Name);
+                if (fetched.length > 0) {
+                    allTheories = fetched;
+                    theoryDataStore = {}; // Reset to prefer Airtable
+                    allTheories.forEach(r => {
+                        theoryDataStore[r.fields.Name] = {
+                            id: r.id,
+                            status: r.fields.Status,
+                            description: r.fields.Description,
+                            latestIntel: r.fields.Latest_Intel,
+                            updatedTime: r.fields.Last_Updated,
+                            category: r.fields.Category || "Unclassified" 
+                        };
+                    });
+                }
+                hydrateGridUI();
             } catch (err) { console.error("Airtable Error", err); }
         }
 
         function getBoardTheories() {
-            return Array.from(document.querySelectorAll('.slot[data-theory-name]')).map(s => s.dataset.theoryName).filter(n => n && n !== "THEY ARE HERE");
+            return Array.from(document.querySelectorAll('.slot[data-theory-name]')).map(s => s.dataset.theoryName).filter(n => n && n !== "DISCLOSURE IMMINENT");
         }
 
-        // --- NEW: MODE TOGGLE & SLOT CLICK LOGIC ---
         function toggleAppMode() {
             const btn = document.getElementById('mode-toggle');
             const gridEl = document.getElementById('bingo-grid');
@@ -222,7 +241,7 @@
                 btn.innerText = "🔍 RESEARCH MODE";
                 btn.classList.remove('mode-rearrange');
                 gridEl.classList.remove('is-rearranging');
-                clearSwapSelection(); // abort any pending swap
+                clearSwapSelection();
             }
         }
 
@@ -231,23 +250,18 @@
             const nameHere = slot.dataset.theoryName;
 
             if (appMode === 'research') {
-                // Default Behavior: Open Dossier
-                if (nameHere) {
-                    openOmniModal(index, nameHere);
-                } else {
+                if (nameHere) openOmniModal(index, nameHere);
+                else {
                     const available = getVaultTheories();
                     if(available.length > 0) openOmniModal(index, available[0]);
                 }
             } else if (appMode === 'swap') {
-                // Rearrange Behavior: Select and Swap
-                if (index === 12) return; // Cannot move the free space
+                if (index === 4) return; // Cannot move center
 
                 if (selectedSwapIndex === null) {
-                    // Select first tile
                     selectedSwapIndex = index;
                     slot.classList.add('swap-selected');
                 } else {
-                    // We have a second tile, execute swap!
                     if (selectedSwapIndex !== index) {
                         const slot1 = document.querySelector(`.slot[data-index='${selectedSwapIndex}']`);
                         const slot2 = slot;
@@ -255,13 +269,8 @@
                         const name1 = slot1.dataset.theoryName;
                         const name2 = slot2.dataset.theoryName;
 
-                        // Swap visually and in data
-                        if (name2) updateSlotUI(slot1, name2);
-                        else clearSlotDOM(slot1);
-
-                        if (name1) updateSlotUI(slot2, name1);
-                        else clearSlotDOM(slot2);
-
+                        if (name2) updateSlotUI(slot1, name2); else clearSlotDOM(slot1);
+                        if (name1) updateSlotUI(slot2, name1); else clearSlotDOM(slot2);
                         saveState();
                     }
                     clearSwapSelection();
@@ -283,7 +292,6 @@
             delete slot.dataset.theoryName;
         }
 
-        // --- THE ZERO-LATENCY OMNI-MODAL LOGIC ---
         function openOmniModal(index, theoryName) {
             activeDossierIndex = index;
             activeDossierTheory = theoryName;
@@ -299,15 +307,15 @@
             const lore = data.description || "Monitors active. Waiting for confirmed data leak.";
             const intel = data.latestIntel || "No anomalous chatter detected. Standby.";
             const cat = data.category || "Unclassified";
-            const isFreeSpace = (theoryName === "THEY ARE HERE");
+            const isFreeSpace = (theoryName === "DISCLOSURE IMMINENT");
             const currentBet = userBets[theoryName];
             
             let html = `
                 <h2 style="color:var(--accent); margin:0 0 5px 0;">${theoryName}</h2>
-                <span style="background:#222; padding:3px 8px; border-radius:12px; font-size:0.65rem; color:#888;">TAG: ${cat.toUpperCase()}</span>
+                <span style="background:#222; padding:3px 8px; border-radius:12px; font-size:0.7rem; color:#888;">TAG: ${cat.toUpperCase()}</span>
                 
                 <div class="modal-section" style="border:none; margin-top:10px; padding-top:0;">
-                    <p style="font-size:0.85rem; line-height:1.5;">${lore}</p>
+                    <p style="font-size:0.9rem; line-height:1.5;">${lore}</p>
                     <div class="dossier-news">
                         <p style="color:#ffd700; margin:0 0 5px 0; text-transform:uppercase;"><strong>Latest Chatter (24h)</strong></p>
                         <p style="margin:0;">${intel}</p>
@@ -352,7 +360,7 @@
                 }
             }
 
-            // NEW: RABBIT HOLE PORTALS
+            // RABBIT HOLE PORTALS
             const query = encodeURIComponent(theoryName + " conspiracy");
             html += `
                 <div class="modal-section">
@@ -403,7 +411,7 @@
                     `;
                 }
 
-                // ZONE 4: Whistleblower
+                // Whistleblower
                 html += `
                     <div class="modal-section">
                         <div class="section-title">Declassify Custom Intel</div>
@@ -418,7 +426,6 @@
             document.getElementById('dossier-content').innerHTML = html;
         }
 
-        // --- OMNI-MODAL ACTIONS ---
         function submitBet(betState) {
             if(!activeDossierTheory) return;
             userBets[activeDossierTheory] = betState;
@@ -454,7 +461,7 @@
             const fakeData = {
                 id: 'temp_' + Date.now(),
                 status: 'Unverified',
-                description: 'User-submitted intel. Awaiting AI synopsis and verification.',
+                description: 'User-submitted intel. Awaiting verification.',
                 latestIntel: 'Monitoring secure channels...',
                 category: 'User Custom'
             };
@@ -471,7 +478,6 @@
             activeDossierTheory = null;
         }
 
-        // --- GRID UI & STATE CONTROLS ---
         function getVaultTheories() {
             const onBoard = getBoardTheories();
             return allTheories.map(t => t.fields.Name).filter(n => !onBoard.includes(n));
@@ -509,12 +515,16 @@
 
         function randomizeBoard() {
             let available = getVaultTheories();
+            // Fallback to defaults if vault is empty
+            if (available.length < 8) {
+                 available = allTheories.map(t => t.fields.Name).filter(n => n !== "DISCLOSURE IMMINENT");
+            }
             available.sort(() => Math.random() - 0.5); 
             
             const slots = document.querySelectorAll('.slot');
             let aIdx = 0;
             slots.forEach((slot, i) => {
-                if (i === 12) return;
+                if (i === 4) return; // 3x3 center is 4
                 if (aIdx < available.length) {
                     const tName = available[aIdx++];
                     updateSlotUI(slot, tName);
@@ -538,10 +548,8 @@
             const saved = localStorage.getItem(fullKey);
             
             if (!saved) {
-                document.querySelectorAll('.slot').forEach(s => { 
-                    if(!s.classList.contains('free-space')) clearSlotDOM(s);
-                });
-                userBets = {}; 
+                // Initial Load: Build a perfect 3x3 UAP board
+                randomizeBoard();
                 return;
             }
             
@@ -549,7 +557,7 @@
             userBets = state.bets || {};
             const slots = document.querySelectorAll('.slot');
             state.board.forEach((name, i) => {
-                if (i === 12) return;
+                if (i === 4) return;
                 if (name) updateSlotUI(slots[i], name);
                 else clearSlotDOM(slots[i]);
             });
@@ -557,15 +565,17 @@
 
         function shareBoard() {
             const slots = Array.from(document.querySelectorAll('.slot'));
-            let shareText = `My AlienBingo.wtf Predictions (${activeBoardId.toUpperCase()}) 👽\n\n`;
-            for (let i = 0; i < 25; i++) {
-                if (i === 12) shareText += "🟨"; 
+            let shareText = `My AlienBingo Predictions 👽\n\n`;
+            for (let i = 0; i < 9; i++) {
+                if (i === 4) shareText += "🟨"; 
                 else if (slots[i].classList.contains('bet-prove')) shareText += "🟩";
                 else if (slots[i].classList.contains('bet-debunk')) shareText += "🟥";
                 else shareText += "⬛"; 
-                if ((i + 1) % 5 === 0) shareText += "\n";
+                
+                // Break line every 3 tiles
+                if ((i + 1) % 3 === 0) shareText += "\n";
             }
-            navigator.clipboard.writeText(shareText).then(() => alert("Grid copied! Share it to recruit others."));
+            navigator.clipboard.writeText(shareText).then(() => alert("3x3 Grid copied! Share it to recruit others."));
         }
 
         function handleSignIn(response) {
@@ -574,7 +584,7 @@
             hydrateState(userEmail);
         }
 
-        // Initialize
+        // Initialize App
         hydrateState('anon'); 
         fetchTheories();
     </script>
